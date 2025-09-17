@@ -1,0 +1,5 @@
+{
+  "name": "AI ComfyUI Workflow Suite",
+  "description": "An AI-powered application that generates ComfyUI workflows from natural language descriptions. Describe your desired image generation process, and the AI will construct a complete, downloadable JSON workflow file.",
+  "requestFramePermissions": []
+}
