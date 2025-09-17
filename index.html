@@ -8,10 +8,55 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+      
+      :root {
+        --background-start: #1a0b36;
+        --background-end: #0f2c3d;
+        --glass-bg: rgba(28, 36, 56, 0.6);
+        --glass-border: rgba(255, 255, 255, 0.1);
+        --accent-glow: 0 0 15px rgba(20, 220, 190, 0.6);
+        --text-primary: #e5e7eb;
+        --text-secondary: #9ca3af;
+      }
+
       body {
         font-family: 'Inter', sans-serif;
+        background-color: var(--background-start);
+        background-image: linear-gradient(135deg, var(--background-start) 0%, var(--background-end) 100%);
+        background-attachment: fixed;
+        color: var(--text-primary);
       }
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+      
+      .glass-panel {
+        background-color: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      }
+
+      .btn-glow {
+        box-shadow: var(--accent-glow);
+      }
+      
+      /* Custom scrollbar for a modern look */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+
     </style>
   <script type="importmap">
 {
@@ -26,7 +71,7 @@
 }
 </script>
 </head>
-  <body class="bg-gray-900 text-gray-200">
+  <body class="text-gray-200">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

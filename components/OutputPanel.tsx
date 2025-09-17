@@ -35,13 +35,16 @@ const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, onDownload, onC
 
   if (!workflowData) {
     return (
-      <div className="w-full lg:w-1/2 bg-gray-950 flex flex-col items-center justify-center text-center p-6">
-        <div className="text-gray-600">
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-20 h-20 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19 14.5M12 14.5v-5.714c0-.597-.237-1.17-.659-1.591L7 3.104M12 14.5c0 0-3.032 3.032-3.75 3.75M12 14.5c0 0 3.032 3.032 3.75 3.75" />
-          </svg>
-          <h3 className="text-2xl font-bold text-gray-500">{t.waitingForGeneration}</h3>
-          <p className="mt-2 max-w-sm text-gray-600">{t.waitingForGenerationSubtext}</p>
+      <div className="w-full lg:w-1/2 glass-panel rounded-2xl flex flex-col items-center justify-center text-center p-6">
+        <div className="text-gray-500">
+           <div className="relative w-24 h-24 mx-auto mb-4">
+              <div className="absolute inset-0 bg-teal-500/20 rounded-full animate-ping"></div>
+              <svg xmlns="http://www.w3.org/2000/svg" className="relative w-24 h-24 text-teal-400/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={0.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19 14.5M12 14.5v-5.714c0-.597-.237-1.17-.659-1.591L7 3.104M12 14.5c0 0-3.032 3.032-3.75 3.75M12 14.5c0 0 3.032 3.032 3.75 3.75" />
+              </svg>
+           </div>
+          <h3 className="text-2xl font-bold text-gray-400">{t.waitingForGeneration}</h3>
+          <p className="mt-2 max-w-sm text-gray-500">{t.waitingForGenerationSubtext}</p>
         </div>
       </div>
     );
@@ -55,9 +58,9 @@ const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, onDownload, onC
     const status = isValidationLog ? log.status : 'corrected';
     
     const colorClass = {
-        passed: 'border-green-600',
-        corrected: 'border-sky-600',
-        failed: 'border-red-600',
+        passed: 'border-green-500/50',
+        corrected: 'border-sky-500/50',
+        failed: 'border-red-500/50',
     }[status];
 
     const textColorClass = {
@@ -67,7 +70,7 @@ const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, onDownload, onC
     }[status];
     
     return (
-        <div key={index} className={`p-3 bg-gray-800/50 border-l-4 ${colorClass} rounded`}>
+        <div key={index} className={`p-4 bg-black/20 border-l-4 ${colorClass} rounded-r-lg`}>
             {isValidationLog ? (
                 <>
                     <p className="font-semibold text-gray-200">{log.check}: <span className={`font-bold uppercase text-sm ${textColorClass}`}>{log.status}</span></p>
@@ -96,15 +99,15 @@ const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, onDownload, onC
   }
 
   return (
-    <div className="w-full lg:w-1/2 bg-gray-950 flex flex-col">
-      <div className="flex-shrink-0 p-4 flex justify-between items-center border-b border-gray-800">
-        <div className="flex space-x-1 bg-gray-800 p-1 rounded-lg">
+    <div className="w-full lg:w-1/2 glass-panel rounded-2xl flex flex-col overflow-hidden">
+      <div className="flex-shrink-0 p-3 flex justify-between items-center border-b border-[var(--glass-border)]">
+        <div className="flex space-x-1 bg-black/20 p-1 rounded-full">
           {tabConfig.map(tab => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                activeTab === tab.key ? 'bg-sky-600 text-white' : 'text-gray-300 hover:bg-gray-700'
+              className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all duration-300 ${
+                activeTab === tab.key ? 'bg-sky-500/80 text-white shadow-sm' : 'text-gray-300 hover:bg-white/10'
               }`}
             >
               {tab.label}
@@ -112,42 +115,42 @@ const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, onDownload, onC
           ))}
         </div>
         <div className="flex items-center space-x-2">
-            <button onClick={onValidate} title={t.tooltipValidate} className="p-2 bg-gray-700 rounded-md hover:bg-gray-600"><BugAntIcon className="w-5 h-5" /></button>
-            <button onClick={onRun} title={t.tooltipRun} className="p-2 bg-gray-700 rounded-md hover:bg-gray-600"><PlayIcon className="w-5 h-5" /></button>
-            <button onClick={onCopy} title={t.tooltipCopy} className="p-2 bg-gray-700 rounded-md hover:bg-gray-600"><ClipboardIcon className="w-5 h-5" /></button>
-            <button onClick={onDownload} title={t.tooltipDownload} className="p-2 bg-teal-600 rounded-md hover:bg-teal-500"><DownloadIcon className="w-5 h-5" /></button>
+            <button onClick={onValidate} title={t.tooltipValidate} className="p-2.5 bg-white/10 rounded-full hover:bg-white/20 transition-colors"><BugAntIcon className="w-5 h-5" /></button>
+            <button onClick={onRun} title={t.tooltipRun} className="p-2.5 bg-white/10 rounded-full hover:bg-white/20 transition-colors"><PlayIcon className="w-5 h-5" /></button>
+            <button onClick={onCopy} title={t.tooltipCopy} className="p-2.5 bg-white/10 rounded-full hover:bg-white/20 transition-colors"><ClipboardIcon className="w-5 h-5" /></button>
+            <button onClick={onDownload} title={t.tooltipDownload} className="p-2.5 bg-teal-500/90 rounded-full hover:bg-teal-500 transition-colors"><DownloadIcon className="w-5 h-5" /></button>
         </div>
       </div>
 
       <div className="flex-grow overflow-auto">
         {activeTab === 'visualizer' && <WorkflowVisualizer workflow={workflow} />}
         {activeTab === 'workflow' && (
-          <pre className="text-xs p-4 text-gray-300 bg-gray-900 h-full">
+          <pre className="text-xs p-4 text-gray-300 bg-black/10 h-full">
             <code>{JSON.stringify(workflow, null, 2)}</code>
           </pre>
         )}
         {activeTab === 'requirements' && (
-          <div className="p-4 space-y-4">
-             <h3 className="text-lg font-bold">{t.customNodes}</h3>
+          <div className="p-6 space-y-6">
+             <h3 className="text-lg font-bold text-gray-200">{t.customNodes}</h3>
              {requirements.custom_nodes.length > 0 ? requirements.custom_nodes.map((node, i) => (
-                <div key={i} className="p-3 bg-gray-800 rounded-lg">
-                    <p className="font-semibold">{node.name}</p>
+                <div key={i} className="p-4 bg-black/20 rounded-xl">
+                    <p className="font-semibold text-gray-100">{node.name}</p>
                     {node.url && <a href={node.url} target="_blank" rel="noopener noreferrer" className="text-xs text-sky-400 hover:underline">{node.url}</a>}
-                    <pre className="text-xs mt-2 p-2 bg-black/50 rounded whitespace-pre-wrap font-mono"><code>{node.install_instructions}</code></pre>
+                    <pre className="text-xs mt-2 p-3 bg-black/30 rounded-lg whitespace-pre-wrap font-mono"><code>{node.install_instructions}</code></pre>
                 </div>
              )) : <p className="text-sm text-gray-500">{t.noCustomNodes}</p>}
-             <h3 className="text-lg font-bold">{t.models}</h3>
+             <h3 className="text-lg font-bold text-gray-200">{t.models}</h3>
               {requirements.models.length > 0 ? requirements.models.map((model, i) => (
-                <div key={i} className="p-3 bg-gray-800 rounded-lg">
-                    <p className="font-semibold">{model.name} <span className="text-xs text-gray-400">({model.model_type})</span></p>
+                <div key={i} className="p-4 bg-black/20 rounded-xl">
+                    <p className="font-semibold text-gray-100">{model.name} <span className="text-xs text-gray-400">({model.model_type})</span></p>
                     {model.url && <a href={model.url} target="_blank" rel="noopener noreferrer" className="text-xs text-sky-400 hover:underline">{t.downloadLink}</a>}
-                    {model.install_path && <p className="text-xs text-gray-500 mt-1">{t.installTo} {model.install_path}</p>}
+                    {model.install_path && <p className="text-xs text-gray-500 mt-1">{t.installTo} <code className="bg-black/20 px-1 rounded">{model.install_path}</code></p>}
                 </div>
               )) : <p className="text-sm text-gray-500">{t.noModels}</p>}
           </div>
         )}
         {activeTab === 'logs' && hasLogs && (
-            <div className="p-4 space-y-3">
+            <div className="p-6 space-y-4">
                 {validationLog && validationLog.map(renderLogEntry)}
                 {correctionLog && correctionLog.map(renderLogEntry)}
             </div>

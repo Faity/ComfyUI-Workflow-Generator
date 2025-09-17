@@ -108,27 +108,27 @@ const PromptOptimizerModal: React.FC<PromptOptimizerModalProps> = ({ isOpen, onC
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl h-[80vh] flex flex-col">
-        <header className="flex items-center justify-between p-4 border-b border-gray-700">
-          <h2 className="text-xl font-bold flex items-center">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="glass-panel rounded-2xl shadow-2xl w-full max-w-2xl h-[80vh] flex flex-col overflow-hidden">
+        <header className="flex items-center justify-between p-4 border-b border-[var(--glass-border)] flex-shrink-0">
+          <h2 className="text-xl font-bold flex items-center text-gray-100">
             <SparklesIcon className="w-6 h-6 mr-3 text-sky-400" />
             {t.promptAssistant}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white">&times;</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl">&times;</button>
         </header>
         
         <div ref={chatContainerRef} className="flex-grow p-4 overflow-y-auto space-y-4">
           {messages.map((msg, index) => (
             <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-lg p-3 rounded-lg ${msg.sender === 'user' ? 'bg-sky-600 text-white' : 'bg-gray-700 text-gray-200'}`}>
+              <div className={`max-w-lg p-3 rounded-lg ${msg.sender === 'user' ? 'bg-sky-500/80 text-white' : 'bg-black/20 text-gray-200'}`}>
                 {msg.text.split('\n').map((line, i) => <p key={i}>{line}</p>)}
               </div>
             </div>
           ))}
           {isLoading && (
             <div className="flex justify-start">
-               <div className="max-w-lg p-3 rounded-lg bg-gray-700 text-gray-200 flex items-center space-x-2">
+               <div className="max-w-lg p-3 rounded-lg bg-black/20 text-gray-200 flex items-center space-x-2">
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-0"></div>
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-150"></div>
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-300"></div>
@@ -137,13 +137,13 @@ const PromptOptimizerModal: React.FC<PromptOptimizerModalProps> = ({ isOpen, onC
           )}
         </div>
         
-        <footer className="p-4 border-t border-gray-700">
+        <footer className="p-4 border-t border-[var(--glass-border)] flex-shrink-0">
           {finalPrompt ? (
              <div className="text-center">
                 <p className="text-sm text-green-400 mb-3">{t.optimizerPromptCreated}</p>
                 <button
                     onClick={() => onOptimize(finalPrompt)}
-                    className="w-full px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors"
+                    className="w-full px-6 py-3 bg-green-600/90 text-white font-semibold rounded-lg hover:bg-green-600 transition-colors"
                 >
                     {t.optimizerUsePrompt}
                 </button>
@@ -156,13 +156,13 @@ const PromptOptimizerModal: React.FC<PromptOptimizerModalProps> = ({ isOpen, onC
                     onChange={(e) => setUserInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                     placeholder={t.optimizerPlaceholder}
-                    className="flex-grow p-3 bg-gray-900 border border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500 transition-colors"
+                    className="flex-grow p-3 bg-black/20 border border-transparent focus:border-teal-500/50 rounded-lg focus:ring-2 focus:ring-teal-400 transition-all duration-300"
                     disabled={isLoading}
                 />
                 <button
                     onClick={handleSendMessage}
                     disabled={isLoading || !userInput.trim()}
-                    className="px-6 py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 disabled:bg-gray-600 transition-colors"
+                    className="px-6 py-3 bg-teal-500/90 text-white font-semibold rounded-lg hover:bg-teal-500 disabled:bg-gray-600/50 transition-colors"
                 >
                     {t.optimizerSend}
                 </button>

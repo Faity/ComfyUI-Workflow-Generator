@@ -21,13 +21,13 @@ const InputPanel: React.FC<InputPanelProps> = ({ prompt, setPrompt, onGenerate, 
   const t = useTranslations();
   
   return (
-    <div className="w-full lg:w-1/2 bg-gray-900 p-6 flex flex-col space-y-4">
+    <div className="w-full lg:w-1/2 glass-panel rounded-2xl p-8 flex flex-col space-y-6 transition-all duration-300">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold text-gray-200">{t.describeWorkflow}</h2>
+        <h2 className="text-2xl font-bold text-gray-100">{t.describeWorkflow}</h2>
         <button 
             onClick={onOpenOptimizer}
             disabled={isLoading}
-            className="flex items-center px-3 py-1 text-sm bg-sky-600 text-white rounded-md hover:bg-sky-700 disabled:opacity-50 transition-colors"
+            className="flex items-center px-4 py-2 text-sm bg-sky-500/80 backdrop-blur-sm border border-sky-400/50 text-white rounded-full hover:bg-sky-500 disabled:opacity-50 transition-all duration-300 transform hover:scale-105"
             title={t.promptAssistantTitle}
         >
             <SparklesIcon className="w-4 h-4 mr-2" />
@@ -41,11 +41,11 @@ const InputPanel: React.FC<InputPanelProps> = ({ prompt, setPrompt, onGenerate, 
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         placeholder={t.promptPlaceholder}
-        className="w-full h-64 p-4 bg-gray-800 border border-gray-700 rounded-lg resize-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors text-gray-200"
+        className="w-full h-64 p-4 bg-black/20 rounded-xl resize-none focus:ring-2 focus:ring-teal-400 focus:bg-black/30 border border-transparent focus:border-teal-500/50 transition-all duration-300 text-gray-200 placeholder-gray-500"
         disabled={isLoading}
       />
       
-      <div className="space-y-2">
+      <div className="space-y-3">
         <h3 className="text-sm font-semibold text-gray-400">{t.tryExample}</h3>
         <div className="flex flex-wrap gap-2">
           {examplePrompts.map((p, i) => (
@@ -53,7 +53,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ prompt, setPrompt, onGenerate, 
               key={i}
               onClick={() => setPrompt(p)}
               disabled={isLoading}
-              className="px-3 py-1 text-xs bg-gray-700 text-gray-300 rounded-full hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-3 py-1.5 text-xs bg-white/10 text-gray-300 rounded-full hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {p}
             </button>
@@ -64,7 +64,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ prompt, setPrompt, onGenerate, 
       <button
         onClick={onGenerate}
         disabled={isLoading || !prompt.trim()}
-        className="w-full flex items-center justify-center px-6 py-3 bg-teal-600 text-white font-semibold rounded-lg shadow-md hover:bg-teal-700 disabled:bg-gray-600 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-200"
+        className={`w-full flex items-center justify-center px-6 py-4 bg-teal-500/90 text-white font-bold rounded-xl shadow-lg hover:bg-teal-500 disabled:bg-gray-600/50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-300 ${!isLoading && prompt.trim() ? 'btn-glow' : ''}`}
       >
         {isLoading ? (
           <div className="w-6 h-6 border-2 border-dashed rounded-full animate-spin border-white"></div>

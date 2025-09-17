@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from 'uuid';
 import type { ComfyUIWorkflow } from '../types';
 
 /**
@@ -7,7 +8,7 @@ import type { ComfyUIWorkflow } from '../types';
  * @returns The response from the ComfyUI server, typically containing a prompt_id.
  */
 export const executeWorkflow = async (workflow: ComfyUIWorkflow, apiUrl: string): Promise<any> => {
-    const clientId = crypto.randomUUID();
+    const clientId = uuidv4();
 
     const payload = {
         prompt: workflow,

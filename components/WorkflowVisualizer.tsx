@@ -18,12 +18,12 @@ const typeColorMapping: { [key: string]: string } = {
 };
 
 const getNodeColor = (type: string) => {
-    if (type.includes('Loader')) return 'bg-blue-800';
-    if (type.includes('Sampler')) return 'bg-red-800';
-    if (type.includes('Encode')) return 'bg-yellow-800';
-    if (type.includes('Decode')) return 'bg-cyan-800';
-    if (type.includes('Image')) return 'bg-green-800';
-    return 'bg-gray-700';
+    if (type.includes('Loader')) return 'bg-blue-500/50';
+    if (type.includes('Sampler')) return 'bg-red-500/50';
+    if (type.includes('Encode')) return 'bg-yellow-500/50';
+    if (type.includes('Decode')) return 'bg-cyan-500/50';
+    if (type.includes('Image')) return 'bg-green-500/50';
+    return 'bg-gray-500/50';
 };
 
 
@@ -40,7 +40,7 @@ const WorkflowNode: React.FC<{ node: ComfyUINode; onClick: () => void; }> = ({ n
   return (
     <div
       id={`node-${node.id}`}
-      className="absolute bg-gray-800 border border-gray-600 rounded-lg shadow-lg text-white text-xs cursor-pointer hover:border-teal-500 transition-colors"
+      className="absolute glass-panel rounded-lg shadow-lg text-white text-xs cursor-pointer hover:border-teal-400/80 transition-colors"
       style={{
         left: `${node.pos[0]}px`,
         top: `${node.pos[1]}px`,
@@ -55,14 +55,14 @@ const WorkflowNode: React.FC<{ node: ComfyUINode; onClick: () => void; }> = ({ n
       <div className="relative p-2">
         {Array.isArray(node.inputs) && node.inputs.map((input, index) => (
           <div key={index} className="flex items-center" style={{ height: `${SLOT_HEIGHT}px` }}>
-            <div className="w-2 h-2 rounded-full bg-gray-500 mr-2"></div>
+            <div className="w-2 h-2 rounded-full bg-gray-400 mr-2"></div>
             <span>{input.name}</span>
           </div>
         ))}
         {Array.isArray(node.outputs) && node.outputs.map((output, index) => (
           <div key={index} className="absolute flex items-center right-2" style={{ top: `${NODE_HEADER_HEIGHT + index * SLOT_HEIGHT}px`, height: `${SLOT_HEIGHT}px`}}>
              <span>{output.name}</span>
-            <div className="w-2 h-2 rounded-full bg-gray-500 ml-2"></div>
+            <div className="w-2 h-2 rounded-full bg-gray-400 ml-2"></div>
           </div>
         ))}
       </div>
@@ -96,9 +96,18 @@ const WorkflowVisualizer: React.FC<{ workflow: ComfyUIWorkflow }> = ({ workflow 
   };
 
   return (
-    <div className="relative w-full h-full overflow-auto bg-gray-900 p-4">
+    <div className="relative w-full h-full overflow-auto p-4">
         <div className="relative" style={{ width: `${maxX + 50}px`, height: `${maxY + 50}px`}}>
             <svg className="absolute top-0 left-0 w-full h-full" style={{ zIndex: 0 }}>
+                <defs>
+                  <filter id="glow">
+                    <feGaussianBlur stdDeviation="3.5" result="coloredBlur" />
+                    <feMerge>
+                      <feMergeNode in="coloredBlur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
                 {workflow.links.map(link => {
                     const fromNode = nodesById.get(link[1]);
                     const toNode = nodesById.get(link[3]);
@@ -127,6 +136,7 @@ const WorkflowVisualizer: React.FC<{ workflow: ComfyUIWorkflow }> = ({ workflow 
                             d={pathData}
                             className={`${colorClass} fill-none`}
                             strokeWidth="2"
+                            style={{ filter: 'url(#glow)' }}
                         />
                     );
                 })}
