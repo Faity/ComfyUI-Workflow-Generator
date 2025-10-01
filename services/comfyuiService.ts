@@ -62,3 +62,57 @@ export const executeWorkflow = async (workflow: ComfyUIWorkflow, apiUrl: string)
         throw error;
     }
 };
+
+
+export const testComfyUIConnection = async (apiUrl: string): Promise<{ success: boolean; message: string; data?: any }> => {
+    let endpoint: string;
+    try {
+        endpoint = new URL('/system_stats', apiUrl).toString();
+    } catch (e) {
+        return { success: false, message: `Invalid URL format: ${apiUrl}` };
+    }
+
+    try {
+        const response = await fetch(endpoint, { method: 'GET' });
+
+        if (!response.ok) {
+            return { 
+                success: false, 
+                message: `Connection failed. Server responded with HTTP status ${response.status} ${response.statusText}. Please check if the URL is correct.` 
+            };
+        }
+
+        const data = await response.json();
+
+        // A simple check to see if the response looks like it's from ComfyUI
+        if (data && data.system && data.devices) {
+             return { success: true, message: 'Connection to ComfyUI successful!', data };
+        } else {
+            return { 
+                success: false, 
+                message: 'Connection established, but the response is not a valid ComfyUI API. Please check the URL.' 
+            };
+        }
+
+    } catch (error) {
+        if (error instanceof TypeError) {
+            // This is the most common error for CORS or network issues
+            return { 
+                success: false, 
+                message: `Network error. Could not connect to ${apiUrl}. Please ensure the server is running, the URL is correct, and CORS is enabled (try starting ComfyUI with the '--enable-cors' flag).`
+            };
+        }
+         if (error instanceof SyntaxError) {
+            // This happens if the response is not JSON, e.g., HTML from a login page
+             return {
+                success: false,
+                message: 'Received an invalid response (not JSON). The URL might be pointing to a website instead of the ComfyUI API.'
+            };
+        }
+        // For other unexpected errors
+        return { 
+            success: false, 
+            message: `An unexpected error occurred: ${(error as Error).message}`
+        };
+    }
+};

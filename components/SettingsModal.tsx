@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslations } from '../hooks/useTranslations';
-import { DownloadIcon } from './Icons';
+import { DownloadIcon, CheckCircleIcon, ExclamationCircleIcon } from './Icons';
+import { testComfyUIConnection } from '../services/comfyuiService';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -12,12 +13,47 @@ interface SettingsModalProps {
   onDownloadSourceCode: () => void;
 }
 
+type TestStatus = 'idle' | 'testing' | 'success' | 'error';
+
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIUrl, setComfyUIUrl, localLlmApiUrl, setLocalLlmApiUrl, onDownloadSourceCode }) => {
   const t = useTranslations();
+  const [testStatus, setTestStatus] = useState<TestStatus>('idle');
+  const [testMessage, setTestMessage] = useState<string>('');
+
+  // Reset test status if URL changes
+  useEffect(() => {
+    setTestStatus('idle');
+  }, [comfyUIUrl]);
+
   if (!isOpen) return null;
+
+  const handleTestConnection = async () => {
+    setTestStatus('testing');
+    const result = await testComfyUIConnection(comfyUIUrl);
+    setTestMessage(result.message);
+    if (result.success) {
+      setTestStatus('success');
+    } else {
+      setTestStatus('error');
+    }
+  };
 
   const handleSave = () => {
     onClose();
+  };
+  
+  const renderTestStatus = () => {
+    switch(testStatus) {
+        case 'testing':
+            return <div className="w-4 h-4 border-2 border-dashed rounded-full animate-spin border-gray-400"></div>;
+        case 'success':
+            return <CheckCircleIcon className="w-5 h-5 text-green-400" title={testMessage} />;
+        case 'error':
+            return <ExclamationCircleIcon className="w-5 h-5 text-red-400" title={testMessage} />;
+        case 'idle':
+        default:
+            return null;
+    }
   };
 
   return (
@@ -46,14 +82,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
         <div className="p-6 space-y-6">
             <div>
                 <label htmlFor="comfy-url-input" className="block text-sm font-medium text-gray-300 mb-2">{t.settingsComfyUrl}</label>
-                <input
-                    id="comfy-url-input"
-                    type="text"
-                    value={comfyUIUrl}
-                    onChange={(e) => setComfyUIUrl(e.target.value)}
-                    placeholder="http://127.0.0.1:8188"
-                    className="w-full p-2 bg-black/20 border border-transparent focus:border-teal-500/50 rounded-lg focus:ring-2 focus:ring-teal-400 transition-all"
-                />
+                <div className="flex items-center space-x-2">
+                    <input
+                        id="comfy-url-input"
+                        type="text"
+                        value={comfyUIUrl}
+                        onChange={(e) => setComfyUIUrl(e.target.value)}
+                        placeholder="http://127.0.0.1:8188"
+                        className="w-full p-2 bg-black/20 border border-transparent focus:border-teal-500/50 rounded-lg focus:ring-2 focus:ring-teal-400 transition-all"
+                    />
+                    <div className="w-5 h-5 flex-shrink-0">{renderTestStatus()}</div>
+                    <button onClick={handleTestConnection} disabled={testStatus === 'testing'} className="px-4 py-2 text-sm bg-sky-500/80 text-white rounded-lg hover:bg-sky-500 disabled:opacity-50 transition-colors whitespace-nowrap">
+                        {t.settingsTestConnection}
+                    </button>
+                </div>
+                {testStatus === 'error' && <p className="mt-2 text-xs text-red-300 bg-red-900/30 p-2 rounded-md">{testMessage}</p>}
+                {testStatus === 'success' && <p className="mt-2 text-xs text-green-300">{testMessage}</p>}
                 <p className="mt-2 text-xs text-gray-400">
                     {t.settingsComfyUrlHelp}
                 </p>

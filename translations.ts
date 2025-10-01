@@ -130,6 +130,10 @@ export const translations = {
     settingsSave: 'Save & Close',
     settingsDownloadSource: 'Download Source Code',
     settingsDownloadSourceHelp: 'Download all source files for this application bundled into a single .txt file.',
+    settingsTestConnection: 'Test Connection',
+    settingsTestStatusTesting: 'Testing...',
+    settingsTestStatusSuccess: 'Connection successful!',
+    settingsTestStatusError: 'Connection failed.',
 
     // DocumentationPanel.tsx
     docLoading: 'Loading documentation...',
@@ -268,6 +272,10 @@ export const translations = {
     settingsSave: 'Speichern & Schließen',
     settingsDownloadSource: 'Quellcode herunterladen',
     settingsDownloadSourceHelp: 'Laden Sie alle Quelldateien dieser Anwendung gebündelt in einer einzigen .txt-Datei herunter.',
+    settingsTestConnection: 'Verbindung testen',
+    settingsTestStatusTesting: 'Teste...',
+    settingsTestStatusSuccess: 'Verbindung erfolgreich!',
+    settingsTestStatusError: 'Verbindung fehlgeschlagen.',
 
     // DocumentationPanel.tsx
     docLoading: 'Dokumentation wird geladen...',
