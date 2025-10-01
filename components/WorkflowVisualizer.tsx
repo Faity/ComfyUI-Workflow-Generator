@@ -118,8 +118,9 @@ const WorkflowVisualizer: React.FC<{ workflow: ComfyUIWorkflow }> = ({ workflow 
                     const toSlotIndex = link[4];
                     const linkType = link[5];
 
-                    const startPos = getSlotPosition(fromNode, fromSlotIndex, false);
-                    const endPos = getSlotPosition(toNode, toSlotIndex, true);
+                    // FIX: Explicitly cast fromNode and toNode to ComfyUINode to resolve a type inference issue where they were being treated as 'unknown'.
+                    const startPos = getSlotPosition(fromNode as ComfyUINode, fromSlotIndex, false);
+                    const endPos = getSlotPosition(toNode as ComfyUINode, toSlotIndex, true);
                     
                     const controlPointX1 = startPos.x + 80;
                     const controlPointY1 = startPos.y;

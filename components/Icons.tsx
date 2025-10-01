@@ -66,3 +66,11 @@ export const BugAntIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
         <path strokeLinecap="round" strokeLinejoin="round" d="M21 12.75a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
 );
+
+export const CpuChipIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75v4.5m0-4.5h-4.5m4.5 0L15 9m5.25 11.25v-4.5m0 4.5h-4.5m4.5 0L15 15" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l-2.25 2.25M15 12l2.25 2.25M12 9l2.25-2.25M12 15l-2.25 2.25" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 12.75c0 .414.336.75.75.75h3c.414 0 .75-.336.75-.75v-1.5c0-.414-.336-.75-.75-.75h-3c-.414 0-.75.336-.75.75v1.5z" />
+  </svg>
+);

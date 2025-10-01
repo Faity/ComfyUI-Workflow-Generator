@@ -9,6 +9,7 @@ import LocalLlmPanel from './components/LocalLlmPanel';
 import DocumentationPanel from './components/DocumentationPanel';
 import Toast from './components/Toast';
 import PromptOptimizerModal from './components/PromptOptimizerModal';
+import WorkflowWizardModal from './components/WorkflowWizardModal';
 import SettingsModal from './components/SettingsModal';
 import { generateWorkflow, validateAndCorrectWorkflow, debugAndCorrectWorkflow } from './services/geminiService';
 import { executeWorkflow } from './services/comfyuiService';
@@ -40,6 +41,7 @@ const App: React.FC = () => {
   
   // Modals
   const [isOptimizerOpen, setIsOptimizerOpen] = useState(false);
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Settings
@@ -189,6 +191,12 @@ const App: React.FC = () => {
       setIsOptimizerOpen(false);
       showToast(t.toastPromptOptimized, 'success');
   };
+
+  const handleWizardComplete = (technicalPrompt: string) => {
+    setPrompt(technicalPrompt);
+    setIsWizardOpen(false);
+    showToast(t.toastWizardPromptGenerated, 'success');
+  };
   
   const toggleLanguage = () => {
       setLanguage(lang => lang === 'de' ? 'en' : 'de');
@@ -218,7 +226,7 @@ const App: React.FC = () => {
   const renderMainView = () => {
     switch(mainView) {
       case 'generator':
-        return <InputPanel prompt={prompt} setPrompt={setPrompt} onGenerate={handleGenerate} isLoading={loadingState.active} onOpenOptimizer={() => setIsOptimizerOpen(true)} />;
+        return <InputPanel prompt={prompt} setPrompt={setPrompt} onGenerate={handleGenerate} isLoading={loadingState.active} onOpenOptimizer={() => setIsOptimizerOpen(true)} onOpenWizard={() => setIsWizardOpen(true)} />;
       case 'tester':
         return <TesterPanel onValidate={handleValidation} isLoading={loadingState.active} />;
       case 'history':
@@ -297,6 +305,14 @@ const App: React.FC = () => {
             onClose={() => setIsOptimizerOpen(false)}
             initialPrompt={prompt}
             onOptimize={handleOptimizePrompt}
+        />
+      )}
+
+      {isWizardOpen && (
+        <WorkflowWizardModal
+            isOpen={isWizardOpen}
+            onClose={() => setIsWizardOpen(false)}
+            onComplete={handleWizardComplete}
         />
       )}
 

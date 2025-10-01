@@ -1,5 +1,5 @@
 import React from 'react';
-import { SparklesIcon } from './Icons';
+import { SparklesIcon, CpuChipIcon } from './Icons';
 import { useTranslations } from '../hooks/useTranslations';
 
 interface InputPanelProps {
@@ -8,6 +8,7 @@ interface InputPanelProps {
   onGenerate: () => void;
   isLoading: boolean;
   onOpenOptimizer: () => void;
+  onOpenWizard: () => void;
 }
 
 const examplePrompts = [
@@ -17,22 +18,33 @@ const examplePrompts = [
     "Workflow für ein SD 1.5 Modell mit ControlNet für Canny Edges.",
 ];
 
-const InputPanel: React.FC<InputPanelProps> = ({ prompt, setPrompt, onGenerate, isLoading, onOpenOptimizer }) => {
+const InputPanel: React.FC<InputPanelProps> = ({ prompt, setPrompt, onGenerate, isLoading, onOpenOptimizer, onOpenWizard }) => {
   const t = useTranslations();
   
   return (
     <div className="w-full lg:w-1/2 glass-panel rounded-2xl p-8 flex flex-col space-y-6 transition-all duration-300">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-100">{t.describeWorkflow}</h2>
-        <button 
-            onClick={onOpenOptimizer}
-            disabled={isLoading}
-            className="flex items-center px-4 py-2 text-sm bg-sky-500/80 backdrop-blur-sm border border-sky-400/50 text-white rounded-full hover:bg-sky-500 disabled:opacity-50 transition-all duration-300 transform hover:scale-105"
-            title={t.promptAssistantTitle}
-        >
-            <SparklesIcon className="w-4 h-4 mr-2" />
-            {t.promptAssistant}
-        </button>
+        <div className="flex items-center space-x-2">
+            <button 
+                onClick={onOpenOptimizer}
+                disabled={isLoading}
+                className="flex items-center px-4 py-2 text-sm bg-sky-500/80 backdrop-blur-sm border border-sky-400/50 text-white rounded-full hover:bg-sky-500 disabled:opacity-50 transition-all duration-300 transform hover:scale-105"
+                title={t.promptAssistantTitle}
+            >
+                <SparklesIcon className="w-4 h-4 mr-2" />
+                {t.promptAssistant}
+            </button>
+            <button 
+                onClick={onOpenWizard}
+                disabled={isLoading}
+                className="flex items-center px-4 py-2 text-sm bg-indigo-500/80 backdrop-blur-sm border border-indigo-400/50 text-white rounded-full hover:bg-indigo-500 disabled:opacity-50 transition-all duration-300 transform hover:scale-105"
+                title={t.workflowWizardTitle}
+            >
+                <CpuChipIcon className="w-4 h-4 mr-2" />
+                {t.workflowWizard}
+            </button>
+        </div>
       </div>
       <p className="text-sm text-gray-400">
         {t.describeWorkflowSubtext}
