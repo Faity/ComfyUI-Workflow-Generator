@@ -18,8 +18,8 @@ Welcome to the AI ComfyUI Workflow Suite! This tool is designed to make creating
 
 The application is divided into a few main areas:
 
--   **Header:** Displays the application name. In the top right, you'll find a gear icon (`⚙️`) for **Settings**.
--   **Tab Bar:** Allows you to switch between the different functions: `Generator`, `Tester`, `History`, and `Local LLM`.
+-   **Header:** Displays the application name. In the top right, you'll find a gear icon (`⚙️`) for **Settings** and a toggle to switch the language between English and German.
+-   **Tab Bar:** Allows you to switch between the different functions: `Generator`, `Tester`, `History`, `Local LLM`, and `Documentation`.
 -   **Main Window:** This is a two-part window. The left half changes based on the selected tab (the input area), while the right half is always the **Output Panel**, where results are displayed.
 
 ---
@@ -37,8 +37,11 @@ Enter a description of what your workflow should do in the large text box.
 ### 2. Prompt Assistant
 If you're unsure how to phrase your prompt, click the `Prompt Assistant` button. A chat window will open where an AI asks you targeted questions about style, composition, lighting, and more to refine your initial idea into a perfect, detailed prompt.
 
-### 3. Generate Workflow
-Once you're satisfied with your description, click `Generate Workflow`. A progress bar will inform you about the individual steps: The AI analyzes your request, creates the workflow, validates it, and finally generates an **image preview**. The result appears in the output panel.
+### 3. Workflow Wizard
+For technically inclined users, the `Workflow Wizard` guides you through a series of technical questions (e.g., which model, which sampler) to construct a precise, technical prompt optimized for workflow generation.
+
+### 4. Generate Workflow
+Once you're satisfied with your description, click `Generate Workflow`. A progress bar will inform you about the individual steps: The AI analyzes your request, creates the workflow, and validates it. The result appears in the output panel.
 
 ---
 
@@ -59,7 +62,7 @@ Do you have an existing workflow that isn't working? You can get it fixed here.
 Every workflow you create in the `Generator` tab is automatically saved here.
 
 -   **List:** Shows all previous generations with their prompt and date.
--   **Select:** Click on an entry to display the result, including the image preview, again in the output panel.
+-   **Select:** Click on an entry to display the result again in the output panel.
 -   **Download (`📥`):** Download the workflow JSON of a specific entry directly.
 -   **Clear History:** Permanently removes all entries. This action cannot be undone.
 
@@ -90,12 +93,13 @@ Fine-tuning adjusts the behavior of the LLM by training it on a specific dataset
 This is where the results of your requests are displayed.
 
 ### Controls (top right)
--   **Run:** Sends the workflow directly to your running ComfyUI instance for execution. **Important:** You must first configure the address of your ComfyUI API in the `Settings`!
+-   **Validate & Correct (`🐛`):** Resubmits the current workflow to the AI for validation and correction. Useful if you've made manual changes or want a second opinion.
+-   **Run (`▶️`):** Sends the workflow directly to your running ComfyUI instance for execution. **Important:** You must first configure the address of your ComfyUI API in the `Settings`!
+-   **Load Workflow in ComfyUI (`📋`):** Copies the workflow to your clipboard and shows an instruction. You can then simply paste the workflow into ComfyUI using Ctrl+V.
 -   **Copy JSON:** Copies the complete workflow JSON to your clipboard.
 -   **Download:** Downloads the workflow as a `.json` file.
 
 ### Tabs
--   **Preview:** Shows an AI-generated, simulated image preview of the workflow. This gives you a quick idea of the potential result before you run the workflow in ComfyUI.
 -   **Visualizer:** Shows a graphical representation of the nodes and their connections. This gives you a quick overview of the workflow's structure. You can click on individual nodes to view their details in a pop-up window.
 -   **Workflow:** Shows the raw JSON code of the workflow.
 -   **Requirements:** Lists all the models and custom nodes required for the workflow.
@@ -114,6 +118,7 @@ Click the gear icon (`⚙️`) in the top right to open the settings.
 
 -   **ComfyUI API URL:** This is the most important setting for workflow execution. For the `Run` function to work, you must enter the address of your ComfyUI instance here. The default value is usually `http://127.0.0.1:8188`.
 -   **Local LLM API URL:** Enter the base URL for your local LLM server here. This is required for the features in the "Local LLM" tab (RAG and Fine-Tuning).
+-   **Download Source Code:** Downloads the entire source code of this web application as a single text file.
 
 ---
 

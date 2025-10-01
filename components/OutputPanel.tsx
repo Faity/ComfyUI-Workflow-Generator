@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import WorkflowVisualizer from './WorkflowVisualizer';
 import type { GeneratedWorkflowResponse, ValidationLogEntry, DebugLogEntry } from '../types';
-import { DownloadIcon, ClipboardIcon, PlayIcon, BugAntIcon } from './Icons';
+import { DownloadIcon, ClipboardIcon, PlayIcon, BugAntIcon, Square2StackIcon } from './Icons';
 import { useTranslations } from '../hooks/useTranslations';
 
 interface OutputPanelProps {
@@ -10,11 +10,12 @@ interface OutputPanelProps {
   onCopy: () => void;
   onRun: () => void;
   onValidate: () => void;
+  onLoad: () => void;
 }
 
 type Tab = 'visualizer' | 'workflow' | 'requirements' | 'logs';
 
-const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, onDownload, onCopy, onRun, onValidate }) => {
+const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, onDownload, onCopy, onRun, onValidate, onLoad }) => {
   const [activeTab, setActiveTab] = useState<Tab>('visualizer');
   const t = useTranslations();
 
@@ -117,6 +118,7 @@ const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, onDownload, onC
         <div className="flex items-center space-x-2">
             <button onClick={onValidate} title={t.tooltipValidate} className="p-2.5 bg-white/10 rounded-full hover:bg-white/20 transition-colors"><BugAntIcon className="w-5 h-5" /></button>
             <button onClick={onRun} title={t.tooltipRun} className="p-2.5 bg-white/10 rounded-full hover:bg-white/20 transition-colors"><PlayIcon className="w-5 h-5" /></button>
+            <button onClick={onLoad} title={t.tooltipLoad} className="p-2.5 bg-white/10 rounded-full hover:bg-white/20 transition-colors"><Square2StackIcon className="w-5 h-5" /></button>
             <button onClick={onCopy} title={t.tooltipCopy} className="p-2.5 bg-white/10 rounded-full hover:bg-white/20 transition-colors"><ClipboardIcon className="w-5 h-5" /></button>
             <button onClick={onDownload} title={t.tooltipDownload} className="p-2.5 bg-teal-500/90 rounded-full hover:bg-teal-500 transition-colors"><DownloadIcon className="w-5 h-5" /></button>
         </div>

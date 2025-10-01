@@ -18,8 +18,8 @@ Herzlich willkommen zur AI ComfyUI Workflow Suite! Dieses Tool wurde entwickelt,
 
 Die Anwendung ist in einige Hauptbereiche unterteilt:
 
--   **Header:** Zeigt den Namen der Anwendung an. Oben rechts finden Sie ein Zahnrad-Symbol (`⚙️`) für die **Einstellungen**.
--   **Tab-Leiste:** Hier können Sie zwischen den verschiedenen Funktionen wechseln: `Generator`, `Tester`, `Verlauf` und `Lokales LLM`.
+-   **Header:** Zeigt den Namen der Anwendung an. Oben rechts finden Sie ein Zahnrad-Symbol (`⚙️`) für die **Einstellungen** und einen Schalter, um die Sprache zwischen Deutsch und Englisch zu wechseln.
+-   **Tab-Leiste:** Hier können Sie zwischen den verschiedenen Funktionen wechseln: `Generator`, `Tester`, `Verlauf`, `Lokales LLM` und `Dokumentation`.
 -   **Hauptfenster:** Dieses ist zweigeteilt. Die linke Hälfte ändert sich je nach gewähltem Tab (Eingabebereich), während die rechte Hälfte immer das **Ausgabefenster** ist, in dem die Ergebnisse angezeigt werden.
 
 ---
@@ -37,8 +37,11 @@ Geben Sie in das große Textfeld eine Beschreibung dessen ein, was Ihr Workflow 
 ### 2. Prompt-Assistent
 Wenn Sie sich nicht sicher sind, wie Sie Ihren Prompt formulieren sollen, klicken Sie auf den `Prompt-Assistent`-Button. Es öffnet sich ein Chatfenster, in dem eine KI Ihnen gezielte Fragen zu Stil, Komposition, Beleuchtung und mehr stellt, um Ihren ursprünglichen Gedanken zu einem perfekten, detaillierten Prompt zu verfeinern.
 
-### 3. Workflow generieren
-Wenn Sie mit Ihrer Beschreibung zufrieden sind, klicken Sie auf `Workflow generieren`. Eine Fortschrittsanzeige informiert Sie über die einzelnen Schritte: Die KI analysiert Ihre Anfrage, erstellt den Workflow, validiert ihn und generiert abschließend eine **Bildvorschau**. Das Ergebnis erscheint im Ausgabefenster.
+### 3. Workflow-Assistent
+Für technisch versierte Benutzer gibt es den `Workflow-Assistent`. Dieser Assistent führt Sie durch eine Reihe technischer Fragen (z.B. welches Modell, welcher Sampler), um einen präzisen, technischen Prompt zu erstellen, der für die Workflow-Generierung optimiert ist.
+
+### 4. Workflow generieren
+Wenn Sie mit Ihrer Beschreibung zufrieden sind, klicken Sie auf `Workflow generieren`. Eine Fortschrittsanzeige informiert Sie über die einzelnen Schritte: Die KI analysiert Ihre Anfrage, erstellt den Workflow und validiert ihn. Das Ergebnis erscheint im Ausgabefenster.
 
 ---
 
@@ -59,7 +62,7 @@ Haben Sie einen bestehenden Workflow, der nicht funktioniert? Hier können Sie i
 Jeder Workflow, den Sie im `Generator`-Tab erstellen, wird automatisch hier gespeichert.
 
 -   **Liste:** Zeigt alle bisherigen Generationen mit Prompt und Datum.
--   **Auswählen:** Klicken Sie auf einen Eintrag, um das Ergebnis inklusive der Bildvorschau erneut im Ausgabefenster anzuzeigen.
+-   **Auswählen:** Klicken Sie auf einen Eintrag, um das Ergebnis erneut im Ausgabefenster anzuzeigen.
 -   **Herunterladen (`📥`):** Laden Sie das Workflow-JSON eines bestimmten Eintrags direkt herunter.
 -   **Verlauf löschen:** Entfernt alle Einträge dauerhaft. Diese Aktion kann nicht rückgängig gemacht werden.
 
@@ -90,12 +93,13 @@ Fine-Tuning passt das Verhalten des LLMs an, indem es auf einem spezifischen Dat
 Hier werden die Ergebnisse Ihrer Anfragen angezeigt.
 
 ### Steuerelemente (oben rechts)
--   **Run:** Sendet den Workflow direkt an Ihre laufende ComfyUI-Instanz zur Ausführung. **Wichtig:** Sie müssen zuerst die Adresse Ihrer ComfyUI-API in den `Einstellungen` konfigurieren!
+-   **Validieren & Korrigieren (`🐛`):** Sendet den aktuellen Workflow erneut zur Validierung und Korrektur an die KI. Nützlich, wenn Sie manuelle Änderungen vorgenommen haben oder eine zweite Meinung wünschen.
+-   **Run (`▶️`):** Sendet den Workflow direkt an Ihre laufende ComfyUI-Instanz zur Ausführung. **Wichtig:** Sie müssen zuerst die Adresse Ihrer ComfyUI-API in den `Einstellungen` konfigurieren!
+-   **Workflow in ComfyUI laden (`📋`):** Kopiert den Workflow in die Zwischenablage und zeigt eine Anleitung an. Sie können den Workflow dann einfach in ComfyUI mit Strg+V einfügen.
 -   **Copy JSON:** Kopiert den vollständigen Workflow-JSON in Ihre Zwischenablage.
 -   **Download:** Lädt den Workflow als `.json`-Datei herunter.
 
 ### Tabs
--   **Vorschau:** Zeigt eine von der KI generierte, simulierte Bildvorschau des Workflows. Dies gibt Ihnen eine schnelle Vorstellung vom möglichen Ergebnis, bevor Sie den Workflow in ComfyUI ausführen.
 -   **Visualisierung:** Zeigt eine grafische Darstellung der Nodes und ihrer Verbindungen. Dies gibt Ihnen einen schnellen Überblick über die Struktur des Workflows. Sie können auf einzelne Nodes klicken, um deren Details in einem Popup-Fenster anzuzeigen.
 -   **Workflow:** Zeigt den rohen JSON-Code des Workflows.
 -   **Anforderungen:** Listet alle für den Workflow benötigten Modelle und Custom Nodes auf.
@@ -114,6 +118,7 @@ Klicken Sie auf das Zahnrad-Symbol (`⚙️`) oben rechts, um die Einstellungen 
 
 -   **ComfyUI API URL:** Dies ist die wichtigste Einstellung für die Workflow-Ausführung. Damit die `Run`-Funktion funktioniert, müssen Sie hier die Adresse Ihrer ComfyUI-Instanz eingeben. Der Standardwert ist normalerweise `http://127.0.0.1:8188`.
 -   **Lokale LLM API URL:** Geben Sie hier die Basis-URL für Ihren lokalen LLM-Server ein. Diese wird für die Funktionen im "Lokales LLM"-Tab (RAG und Fine-Tuning) benötigt.
+-   **Quellcode herunterladen:** Lädt den gesamten Quellcode dieser Webanwendung als einzelne Textdatei herunter.
 
 ---
 

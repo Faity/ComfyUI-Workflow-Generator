@@ -60,6 +60,12 @@ export const PlayIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     </svg>
 );
 
+export const Square2StackIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375v-3.375a2.25 2.25 0 00-2.25-2.25h-1.5a2.25 2.25 0 00-2.25 2.25v3.375m7.5 10.375a2.25 2.25 0 002.25-2.25v-3.375a2.25 2.25 0 00-2.25-2.25h-1.5a2.25 2.25 0 00-2.25 2.25v3.375" />
+  </svg>
+);
+
 export const BugAntIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12.75 15l-1.72-1.72a3.75 3.75 0 00-5.304-5.304L4 10.5m9 4.5l-1.5-1.5m0 0l-1.5 1.5m-1.5-1.5l1.5-1.5m1.5 1.5l-1.5-1.5m1.5-1.5l1.5 1.5m0-1.5l-1.5 1.5m0-1.5l-1.5-1.5m3 3l-1.5-1.5m1.5 1.5l-1.5 1.5m1.5-1.5l1.5-1.5m1.5 1.5l-1.5-1.5M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
