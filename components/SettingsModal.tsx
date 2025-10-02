@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useTranslations } from '../hooks/useTranslations';
 import { DownloadIcon, CheckCircleIcon, ExclamationCircleIcon } from './Icons';
 import { testComfyUIConnection } from '../services/comfyuiService';
+import { testLocalLlmConnection } from '../services/localLlmService';
+
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -17,39 +19,49 @@ type TestStatus = 'idle' | 'testing' | 'success' | 'error';
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIUrl, setComfyUIUrl, localLlmApiUrl, setLocalLlmApiUrl, onDownloadSourceCode }) => {
   const t = useTranslations();
-  const [testStatus, setTestStatus] = useState<TestStatus>('idle');
-  const [testMessage, setTestMessage] = useState<string>('');
+  const [comfyTestStatus, setComfyTestStatus] = useState<TestStatus>('idle');
+  const [comfyTestMessage, setComfyTestMessage] = useState<string>('');
+  const [llmTestStatus, setLlmTestStatus] = useState<TestStatus>('idle');
+  const [llmTestMessage, setLlmTestMessage] = useState<string>('');
 
-  // Reset test status if URL changes
+
   useEffect(() => {
-    setTestStatus('idle');
+    setComfyTestStatus('idle');
   }, [comfyUIUrl]);
+
+  useEffect(() => {
+    setLlmTestStatus('idle');
+  }, [localLlmApiUrl]);
+
 
   if (!isOpen) return null;
 
-  const handleTestConnection = async () => {
-    setTestStatus('testing');
+  const handleTestComfyUI = async () => {
+    setComfyTestStatus('testing');
     const result = await testComfyUIConnection(comfyUIUrl);
-    setTestMessage(result.message);
-    if (result.success) {
-      setTestStatus('success');
-    } else {
-      setTestStatus('error');
-    }
+    setComfyTestMessage(result.message);
+    setComfyTestStatus(result.success ? 'success' : 'error');
   };
+
+  const handleTestLocalLlm = async () => {
+    setLlmTestStatus('testing');
+    const result = await testLocalLlmConnection(localLlmApiUrl);
+    setLlmTestMessage(result.message);
+    setLlmTestStatus(result.success ? 'success' : 'error');
+  }
 
   const handleSave = () => {
     onClose();
   };
   
-  const renderTestStatus = () => {
-    switch(testStatus) {
+  const renderTestStatus = (status: TestStatus, message: string) => {
+    switch(status) {
         case 'testing':
             return <div className="w-4 h-4 border-2 border-dashed rounded-full animate-spin border-gray-400"></div>;
         case 'success':
-            return <CheckCircleIcon className="w-5 h-5 text-green-400" title={testMessage} />;
+            return <CheckCircleIcon className="w-5 h-5 text-green-400" title={message} />;
         case 'error':
-            return <ExclamationCircleIcon className="w-5 h-5 text-red-400" title={testMessage} />;
+            return <ExclamationCircleIcon className="w-5 h-5 text-red-400" title={message} />;
         case 'idle':
         default:
             return null;
@@ -91,27 +103,35 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
                         placeholder="http://127.0.0.1:8188"
                         className="w-full p-2 bg-black/20 border border-transparent focus:border-teal-500/50 rounded-lg focus:ring-2 focus:ring-teal-400 transition-all"
                     />
-                    <div className="w-5 h-5 flex-shrink-0">{renderTestStatus()}</div>
-                    <button onClick={handleTestConnection} disabled={testStatus === 'testing'} className="px-4 py-2 text-sm bg-sky-500/80 text-white rounded-lg hover:bg-sky-500 disabled:opacity-50 transition-colors whitespace-nowrap">
+                    <div className="w-5 h-5 flex-shrink-0">{renderTestStatus(comfyTestStatus, comfyTestMessage)}</div>
+                    <button onClick={handleTestComfyUI} disabled={comfyTestStatus === 'testing'} className="px-4 py-2 text-sm bg-sky-500/80 text-white rounded-lg hover:bg-sky-500 disabled:opacity-50 transition-colors whitespace-nowrap">
                         {t.settingsTestConnection}
                     </button>
                 </div>
-                {testStatus === 'error' && <p className="mt-2 text-xs text-red-300 bg-red-900/30 p-2 rounded-md">{testMessage}</p>}
-                {testStatus === 'success' && <p className="mt-2 text-xs text-green-300">{testMessage}</p>}
+                {comfyTestStatus === 'error' && <p className="mt-2 text-xs text-red-300 bg-red-900/30 p-2 rounded-md">{comfyTestMessage}</p>}
+                {comfyTestStatus === 'success' && <p className="mt-2 text-xs text-green-300">{comfyTestMessage}</p>}
                 <p className="mt-2 text-xs text-gray-400">
                     {t.settingsComfyUrlHelp}
                 </p>
             </div>
              <div>
                 <label htmlFor="local-llm-url-input" className="block text-sm font-medium text-gray-300 mb-2">{t.settingsLocalLlmUrl}</label>
-                <input
-                    id="local-llm-url-input"
-                    type="text"
-                    value={localLlmApiUrl}
-                    onChange={(e) => setLocalLlmApiUrl(e.target.value)}
-                    placeholder="http://127.0.0.1:8000"
-                    className="w-full p-2 bg-black/20 border border-transparent focus:border-teal-500/50 rounded-lg focus:ring-2 focus:ring-teal-400 transition-all"
-                />
+                 <div className="flex items-center space-x-2">
+                    <input
+                        id="local-llm-url-input"
+                        type="text"
+                        value={localLlmApiUrl}
+                        onChange={(e) => setLocalLlmApiUrl(e.target.value)}
+                        placeholder="http://127.0.0.1:8000"
+                        className="w-full p-2 bg-black/20 border border-transparent focus:border-teal-500/50 rounded-lg focus:ring-2 focus:ring-teal-400 transition-all"
+                    />
+                    <div className="w-5 h-5 flex-shrink-0">{renderTestStatus(llmTestStatus, llmTestMessage)}</div>
+                    <button onClick={handleTestLocalLlm} disabled={llmTestStatus === 'testing'} className="px-4 py-2 text-sm bg-sky-500/80 text-white rounded-lg hover:bg-sky-500 disabled:opacity-50 transition-colors whitespace-nowrap">
+                        {t.settingsTestConnection}
+                    </button>
+                </div>
+                {llmTestStatus === 'error' && <p className="mt-2 text-xs text-red-300 bg-red-900/30 p-2 rounded-md">{llmTestMessage}</p>}
+                {llmTestStatus === 'success' && <p className="mt-2 text-xs text-green-300">{llmTestMessage}</p>}
                 <p className="mt-2 text-xs text-gray-400">
                     {t.settingsLocalLlmUrlHelp}
                 </p>

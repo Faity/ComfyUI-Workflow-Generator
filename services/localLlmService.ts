@@ -50,3 +50,37 @@ export const startFineTuning = async (trainingData: string, apiUrl: string): Pro
         throw error;
     }
 };
+
+export const testLocalLlmConnection = async (apiUrl: string): Promise<{ success: boolean; message: string; }> => {
+    let endpoint: string;
+    try {
+        // A common health check endpoint, adjust if your local server uses a different one (e.g., /docs, /healthz)
+        endpoint = new URL('/health', apiUrl).toString();
+    } catch (e) {
+        return { success: false, message: `Invalid URL format: ${apiUrl}` };
+    }
+
+    try {
+        const response = await fetch(endpoint);
+        
+        if (response.ok) {
+             const data = await response.json().catch(() => ({}));
+             return { success: true, message: data.message || 'Connection to Local LLM server successful!' };
+        }
+        
+        const errorText = await response.text();
+        return { success: false, message: `Connection failed. Server responded with HTTP status ${response.status}: ${errorText}` };
+
+    } catch (error) {
+        if (error instanceof TypeError) {
+            return { 
+                success: false, 
+                message: `Network error. Could not connect to ${apiUrl}. Please check if the server is running, the URL is correct, and CORS is enabled.`
+            };
+        }
+        return { 
+            success: false, 
+            message: `An unexpected error occurred: ${(error as Error).message}`
+        };
+    }
+};

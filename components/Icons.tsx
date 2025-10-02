@@ -36,7 +36,6 @@ export const ChartBarIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => 
     </svg>
 );
 
-// FIX: Modified component to accept a 'title' prop and render an SVG <title> element for tooltips.
 export const CheckCircleIcon: React.FC<React.SVGProps<SVGSVGElement> & { title?: string }> = ({ title, ...props }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
         {title && <title>{title}</title>}
@@ -44,7 +43,6 @@ export const CheckCircleIcon: React.FC<React.SVGProps<SVGSVGElement> & { title?:
     </svg>
 );
 
-// FIX: Modified component to accept a 'title' prop and render an SVG <title> element for tooltips.
 export const ExclamationCircleIcon: React.FC<React.SVGProps<SVGSVGElement> & { title?: string }> = ({ title, ...props }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
        {title && <title>{title}</title>}
