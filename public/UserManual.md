@@ -11,6 +11,7 @@ Welcome to the AI ComfyUI Workflow Suite! This tool is designed to make creating
 6.  [The Output Panel in Detail](#the-output-panel-in-detail)
 7.  [Settings](#settings)
 8.  [Tips for Best Results](#tips-for-best-results)
+9.  [Technical Details](#technical-details)
 
 ---
 
@@ -127,3 +128,9 @@ Click the gear icon (`⚙️`) in the top right to open the settings.
 -   **Be specific:** Mention model types (SDXL, SD 1.5), techniques (Inpainting, ControlNet), and styles (photorealistic, anime) in your prompt.
 -   **Provide context:** Explain the goal. Instead of "Two KSamplers," say "One KSampler for a base image and a second for a hi-res fix."
 -   **Check components:** After generation, always check the "Requirements" section to ensure you have installed all necessary models and custom nodes.
+
+---
+
+## Technical Details
+
+-   **RFC Compliance:** The workflow generator is designed to create workflows that comply with the official ComfyUI RFCs (Request for Comments). This ensures that the generated workflows are modern, standardized, and compatible with future versions of ComfyUI.

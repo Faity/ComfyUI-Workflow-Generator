@@ -87,6 +87,10 @@ Example of the final JSON output structure:
 }
 \`\`\`
 
+**RFC COMPLIANCE:**
+You MUST ensure the generated workflow is compliant with the standards and best practices outlined in the official ComfyUI RFCs (see https://github.com/Comfy-Org/rfcs). Specifically:
+- **Base Prompt Schema (RFC 0001):** When generating text-to-image workflows, you should incorporate a mechanism for storing the core prompt data (positive/negative text, seed, etc.) in a structured way that is easily accessible. A common method is to use a \`PrimitiveNode\` where the widget values contain this information. This makes the workflow self-documenting.
+
 When arranging nodes in the workflow, place them in a logical left-to-right flow in the 'pos' array, starting around [100, 100] and increasing the x-coordinate for subsequent nodes to create a readable graph. Assign meaningful titles to nodes via the 'title' property where applicable.
 `;
 

@@ -11,6 +11,7 @@ Herzlich willkommen zur AI ComfyUI Workflow Suite! Dieses Tool wurde entwickelt,
 6.  [Das Ausgabefenster im Detail](#das-ausgabefenster-im-detail)
 7.  [Einstellungen](#einstellungen)
 8.  [Tipps für beste Ergebnisse](#tipps-für-beste-ergebnisse)
+9.  [Technische Details](#technische-details)
 
 ---
 
@@ -127,3 +128,9 @@ Klicken Sie auf das Zahnrad-Symbol (`⚙️`) oben rechts, um die Einstellungen 
 -   **Spezifisch sein:** Geben Sie Modelltypen (SDXL, SD 1.5), Techniken (Inpainting, ControlNet) und Stile (fotorealistisch, Anime) in Ihrem Prompt an.
 -   **Kontext geben:** Erklären Sie das Ziel. Anstatt "Zwei KSampler", sagen Sie "Einen KSampler für ein Basis-Bild und einen zweiten für ein Hi-Res-Fix".
 -   **Komponenten prüfen:** Überprüfen Sie nach der Generierung immer den Abschnitt "Anforderungen", um sicherzustellen, dass Sie alle erforderlichen Modelle und Custom Nodes installiert haben.
+
+---
+
+## Technische Details
+
+-   **RFC-Konformität:** Der Workflow-Generator ist darauf ausgelegt, Workflows zu erstellen, die den offiziellen ComfyUI RFCs (Request for Comments) entsprechen. Dies stellt sicher, dass die generierten Workflows modern, standardisiert und mit zukünftigen Versionen von ComfyUI kompatibel sind.
