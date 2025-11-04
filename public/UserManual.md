@@ -11,7 +11,7 @@ Welcome to the AI ComfyUI Workflow Suite! This tool is designed to make creating
 6.  [The Output Panel in Detail](#the-output-panel-in-detail)
 7.  [Settings](#settings)
 8.  [Tips for Best Results](#tips-for-best-results)
-9.  [Technical Details](#technical-details)
+9.  [Quality & Technical Details](#quality--technical-details)
 
 ---
 
@@ -131,6 +131,11 @@ Click the gear icon (`⚙️`) in the top right to open the settings.
 
 ---
 
-## Technical Details
+## Quality & Technical Details
 
--   **RFC Compliance:** The workflow generator is designed to create workflows that comply with the official ComfyUI RFCs (Request for Comments). This ensures that the generated workflows are modern, standardized, and compatible with future versions of ComfyUI.
+To ensure the highest reliability, every generated or corrected workflow undergoes a multi-stage internal validation process:
+
+1.  **Structural Validation:** First, the basic structure of the JSON is checked. Every value must have the correct data type (e.g., a seed value must be a number, not text).
+2.  **Graph Analysis:** The workflow is analyzed as a logical graph. The AI ensures all connections are consistent, all required inputs are connected, and no "orphan" nodes exist.
+3.  **Semantic Validation:** This is an "expert check." The AI checks the settings in key nodes for plausibility. For example, a `CFG` value of `0` in a `KSampler`, which would ignore the prompt, is automatically corrected to a sensible default like `8.0`.
+4.  **RFC Compliance & Schema Validation:** Every workflow is built to comply with the official ComfyUI RFCs and the latest Zod schema. This guarantees maximum structural correctness and compatibility.

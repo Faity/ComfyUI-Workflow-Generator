@@ -11,7 +11,7 @@ Herzlich willkommen zur AI ComfyUI Workflow Suite! Dieses Tool wurde entwickelt,
 6.  [Das Ausgabefenster im Detail](#das-ausgabefenster-im-detail)
 7.  [Einstellungen](#einstellungen)
 8.  [Tipps für beste Ergebnisse](#tipps-für-beste-ergebnisse)
-9.  [Technische Details](#technische-details)
+9.  [Qualität & Technische Details](#qualität--technische-details)
 
 ---
 
@@ -131,6 +131,11 @@ Klicken Sie auf das Zahnrad-Symbol (`⚙️`) oben rechts, um die Einstellungen 
 
 ---
 
-## Technische Details
+## Qualität & Technische Details
 
--   **RFC-Konformität:** Der Workflow-Generator ist darauf ausgelegt, Workflows zu erstellen, die den offiziellen ComfyUI RFCs (Request for Comments) entsprechen. Dies stellt sicher, dass die generierten Workflows modern, standardisiert und mit zukünftigen Versionen von ComfyUI kompatibel sind.
+Um die höchste Zuverlässigkeit zu gewährleisten, durchläuft jeder generierte oder korrigierte Workflow einen mehrstufigen internen Validierungsprozess:
+
+1.  **Strukturelle Validierung:** Zuerst wird die grundlegende Struktur des JSON geprüft. Jeder Wert muss den korrekten Datentyp haben (z.B. muss ein Seed-Wert eine Zahl und kein Text sein).
+2.  **Graphen-Analyse:** Der Workflow wird als logischer Graph analysiert. Die KI stellt sicher, dass alle Verbindungen konsistent sind, alle benötigten Inputs verbunden sind und keine "verwaisten" Nodes existieren.
+3.  **Semantische Validierung:** Dies ist ein "Experten-Check". Die KI prüft die Einstellungen in wichtigen Nodes auf Plausibilität. Beispielsweise wird ein `CFG`-Wert von `0` in einem `KSampler`, der den Prompt ignorieren würde, automatisch zu einem sinnvollen Standardwert wie `8.0` korrigiert.
+4.  **RFC-Konformität & Schema-Validierung:** Jeder Workflow wird so erstellt, dass er den offiziellen ComfyUI RFCs und dem neuesten Zod-Schema entspricht. Dies garantiert maximale strukturelle Korrektheit und Kompatibilität.
