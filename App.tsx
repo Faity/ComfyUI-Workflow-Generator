@@ -117,7 +117,7 @@ const App: React.FC = () => {
     try {
       // Step 1: Generation
       setLoadingState({ active: true, message: t.loadingStep1, progress: 25 });
-      const response = await generateWorkflow(prompt);
+      const response = await generateWorkflow(prompt, localLlmApiUrl);
       
       // Step 2: Validation
       setLoadingState({ active: true, message: t.loadingStep2, progress: 75 });

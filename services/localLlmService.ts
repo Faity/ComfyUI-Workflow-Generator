@@ -25,6 +25,36 @@ export const uploadRagDocument = async (file: File, apiUrl: string): Promise<{ m
     }
 };
 
+export const queryRag = async (prompt: string, apiUrl: string): Promise<string> => {
+    const endpoint = new URL('/v1/rag/query', apiUrl).toString();
+    const payload = { query: prompt };
+
+    try {
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: response.statusText }));
+            throw new Error(`Server error (${response.status}): ${errorData.detail}`);
+        }
+
+        const responseData = await response.json();
+        // Assuming the server returns a JSON object with a 'response' or 'detail' key containing the text
+        return responseData.response || responseData.detail || '';
+
+    } catch (error) {
+        if (error instanceof TypeError) { // Network error
+            throw new Error(`Failed to connect to local LLM at ${apiUrl}.`);
+        }
+        throw error;
+    }
+};
+
 export const startFineTuning = async (trainingData: string, apiUrl: string): Promise<{ job_id: string }> => {
     const endpoint = new URL('/v1/finetune', apiUrl).toString();
 

@@ -1,10 +1,12 @@
 import { GoogleGenAI } from "@google/genai";
 import type { GeneratedWorkflowResponse, ComfyUIWorkflow, ValidationResponse, DebugResponse } from '../types';
+import { queryRag } from './localLlmService';
 
-const SYSTEM_INSTRUCTION = `You are an expert assistant specializing in ComfyUI, a node-based graphical user interface for Stable Diffusion.
+const SYSTEM_INSTRUCTION_TEMPLATE = `You are an expert assistant specializing in ComfyUI, a node-based graphical user interface for Stable Diffusion.
  Your sole purpose is to generate a complete and valid ComfyUI workflow in JSON format based on a user's request.
 [cite: 187] The user will communicate in German.
 [cite: 188]
+{{RAG_CONTEXT_PLACEHOLDER}}
 **IMPORTANT SYSTEM CONTEXT:**
 You MUST generate a workflow that is compatible with the following system configuration.
 [cite: 188] This means you should:
@@ -274,10 +276,31 @@ Example of the final JSON output structure:
 `;
 
 
-export const generateWorkflow = async (description: string): Promise<Omit<GeneratedWorkflowResponse, 'validationLog'>> => {
+export const generateWorkflow = async (description: string, localLlmApiUrl: string): Promise<Omit<GeneratedWorkflowResponse, 'validationLog'>> => {
   if (!process.env.API_KEY) {
     throw new Error("API key is missing. Please set the API_KEY environment variable.");
   }
+
+  let ragContextBlock = '';
+    if (localLlmApiUrl) {
+        try {
+            const ragContext = await queryRag(description, localLlmApiUrl);
+            if (ragContext && ragContext.trim()) {
+                ragContextBlock = `
+**RAG-KONTEXT:**
+Die folgenden Informationen wurden aus einer lokalen Wissensdatenbank abgerufen, um zusätzlichen Kontext für die Anfrage des Benutzers bereitzustellen. Verwenden Sie diese Informationen, um einen genaueren und relevanteren Workflow zu generieren.
+\`\`\`
+${ragContext.trim()}
+\`\`\`
+`;
+            }
+        } catch (error) {
+            console.warn("Could not query RAG endpoint, proceeding without RAG context.", error);
+            // Non-fatal, just log and continue.
+        }
+    }
+    
+  const finalSystemInstruction = SYSTEM_INSTRUCTION_TEMPLATE.replace('{{RAG_CONTEXT_PLACEHOLDER}}', ragContextBlock);
 
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -287,7 +310,7 @@ export const generateWorkflow = async (description: string): Promise<Omit<Genera
       model: 'gemini-2.5-flash',
       contents: description,
       config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
+        systemInstruction: finalSystemInstruction,
         responseMimeType: "application/json",
       }
     });
