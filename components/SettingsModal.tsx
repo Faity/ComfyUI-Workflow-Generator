@@ -13,20 +13,23 @@ interface SettingsModalProps {
   localLlmApiUrl: string;
   setLocalLlmApiUrl: (url: string) => void;
   onDownloadSourceCode: () => void;
+  version: string;
 }
 
 type TestStatus = 'idle' | 'testing' | 'success' | 'error';
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIUrl, setComfyUIUrl, localLlmApiUrl, setLocalLlmApiUrl, onDownloadSourceCode }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIUrl, setComfyUIUrl, localLlmApiUrl, setLocalLlmApiUrl, onDownloadSourceCode, version }) => {
   const t = useTranslations();
   const [comfyTestStatus, setComfyTestStatus] = useState<TestStatus>('idle');
   const [comfyTestMessage, setComfyTestMessage] = useState<string>('');
+  const [isCorsError, setIsCorsError] = useState<boolean>(false);
   const [llmTestStatus, setLlmTestStatus] = useState<TestStatus>('idle');
   const [llmTestMessage, setLlmTestMessage] = useState<string>('');
 
 
   useEffect(() => {
     setComfyTestStatus('idle');
+    setIsCorsError(false);
   }, [comfyUIUrl]);
 
   useEffect(() => {
@@ -38,9 +41,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
 
   const handleTestComfyUI = async () => {
     setComfyTestStatus('testing');
+    setIsCorsError(false);
     const result = await testComfyUIConnection(comfyUIUrl);
     setComfyTestMessage(result.message);
     setComfyTestStatus(result.success ? 'success' : 'error');
+    if (result.isCorsError) {
+        setIsCorsError(true);
+    }
   };
 
   const handleTestLocalLlm = async () => {
@@ -108,7 +115,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
                         {t.settingsTestConnection}
                     </button>
                 </div>
-                {comfyTestStatus === 'error' && <p className="mt-2 text-xs text-red-300 bg-red-900/30 p-2 rounded-md">{comfyTestMessage}</p>}
+                {isCorsError && (
+                    <div className="mt-3 p-4 bg-yellow-900/40 border border-yellow-500/50 rounded-lg text-yellow-200 text-sm">
+                        <p className="font-bold mb-2">CORS-Problem erkannt</p>
+                        <p className="text-xs">
+                            Der Browser blockiert die Verbindung aus Sicherheitsgründen. Um dies zu beheben, müssen Sie ComfyUI mit einem zusätzlichen Startparameter starten.
+                        </p>
+                        <p className="mt-2 text-xs">
+                            Fügen Sie Ihrer Startdatei (z.B. `run_nvidia_gpu.bat`) das Flag <code className="bg-black/50 px-1 py-0.5 rounded text-white">--enable-cors</code> hinzu und starten Sie ComfyUI neu.
+                        </p>
+                    </div>
+                )}
+                {comfyTestStatus === 'error' && !isCorsError && <p className="mt-2 text-xs text-red-300 bg-red-900/30 p-2 rounded-md">{comfyTestMessage}</p>}
                 {comfyTestStatus === 'success' && <p className="mt-2 text-xs text-green-300">{comfyTestMessage}</p>}
                 <p className="mt-2 text-xs text-gray-400">
                     {t.settingsComfyUrlHelp}
@@ -151,7 +169,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
             </div>
         </div>
 
-        <footer className="p-4 border-t border-[var(--glass-border)] bg-black/10 flex justify-end">
+        <footer className="p-4 border-t border-[var(--glass-border)] bg-black/10 flex justify-between items-center">
+            <span className="text-xs text-gray-500">{t.appVersion} {version}</span>
             <button
                 onClick={handleSave}
                 className="px-5 py-2 bg-teal-500/90 text-white font-semibold rounded-lg hover:bg-teal-500 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-teal-500"

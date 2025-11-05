@@ -144,7 +144,7 @@ export const uploadImage = async (imageFile: File, apiUrl: string): Promise<Comf
 };
 
 
-export const testComfyUIConnection = async (apiUrl: string): Promise<{ success: boolean; message: string; data?: any }> => {
+export const testComfyUIConnection = async (apiUrl: string): Promise<{ success: boolean; message: string; data?: any; isCorsError?: boolean; }> => {
     let endpoint: string;
     try {
         // We test against an endpoint we know exists, like system_stats
@@ -187,6 +187,7 @@ export const testComfyUIConnection = async (apiUrl: string): Promise<{ success: 
             // This is the most common error for CORS or network issues
             return { 
                 success: false, 
+                isCorsError: true,
                 message: `Network error. Could not connect to ${apiUrl}. Please ensure the server is running, the URL is correct, and CORS is enabled (try starting ComfyUI with the '--enable-cors' flag). This test realistically simulates a 'Run' request and has failed.`
             };
         }

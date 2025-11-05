@@ -3,6 +3,7 @@ export const translations = {
     locale: 'en-US',
     // App.tsx
     appTitle: 'ComfyUI Workflow Generator',
+    appVersion: 'Version',
     tabGenerator: 'Generator',
     tabTester: 'Tester',
     tabHistory: 'History',
@@ -162,6 +163,7 @@ export const translations = {
     locale: 'de-DE',
     // App.tsx
     appTitle: 'ComfyUI Workflow Generator',
+    appVersion: 'Version',
     tabGenerator: 'Generator',
     tabTester: 'Tester',
     tabHistory: 'Verlauf',

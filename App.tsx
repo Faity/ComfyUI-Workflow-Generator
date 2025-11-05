@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+// FIX: Corrected import alias for uuid v4 to match usage.
 import { v4 as uuidv4 } from 'uuid';
 import InputPanel from './components/InputPanel';
 import OutputPanel from './components/OutputPanel';
@@ -20,6 +21,7 @@ import type { GeneratedWorkflowResponse, HistoryEntry, ComfyUIWorkflow, SystemIn
 import { useLanguage } from './context/LanguageContext';
 import { useTranslations } from './hooks/useTranslations';
 
+const version = "1.1.0";
 
 type MainView = 'generator' | 'tester' | 'history' | 'local_llm' | 'documentation';
 type ToastState = { id: string; message: string; type: 'success' | 'error' };
@@ -306,7 +308,7 @@ const App: React.FC = () => {
   
   const handleDownloadSourceCode = async () => {
     const filePaths = [
-        'index.html', 'index.tsx', 'metadata.json', 'App.tsx', 'types.ts', 'translations.ts',
+        'index.html', 'index.tsx', 'metadata.json', 'App.tsx', 'types.ts', 'translations.ts', 'package.json',
         'context/LanguageContext.tsx',
         'hooks/useTranslations.ts',
         'services/comfyuiService.ts', 'services/geminiService.ts', 'services/localLlmService.ts', 'services/apiKeyService.ts',
@@ -367,6 +369,7 @@ const App: React.FC = () => {
           <div className="container mx-auto px-6 py-3 flex justify-between items-center">
             <div className="flex items-center">
               <h1 className="text-xl font-bold text-gray-100">{t.appTitle}</h1>
+              <span className="ml-2 text-xs text-gray-500 bg-black/20 px-2 py-0.5 rounded-full">v{version}</span>
             </div>
             <div className="flex items-center space-x-2 bg-black/20 p-1 rounded-full">
               {[
@@ -433,6 +436,7 @@ const App: React.FC = () => {
             localLlmApiUrl={localLlmApiUrl}
             setLocalLlmApiUrl={setLocalLlmApiUrl}
             onDownloadSourceCode={handleDownloadSourceCode}
+            version={version}
         />
       </div>
     </>
