@@ -20,7 +20,6 @@ export const translations = {
     toastWorkflowProcessed: 'Workflow processed successfully!',
     toastValidationError: 'An unknown error occurred during validation.',
     toastComfyUrlNotSet: 'ComfyUI API URL not set. Please configure it in settings.',
-    toastWorkflowSent: 'Workflow sent to ComfyUI successfully!',
     toastHistoryLoaded: 'Loaded workflow from history.',
     toastWorkflowDownloaded: 'Workflow downloaded.',
     toastCopied: 'Workflow JSON copied to clipboard!',
@@ -33,6 +32,9 @@ export const translations = {
     toastImageUploadFailed: (error: string) => `Image upload failed: ${error}`,
     apiKeySetSuccess: 'API Key saved successfully!',
     apiKeySetError: 'Failed to save API key.',
+    toastSendingWorkflow: 'Sending workflow to ComfyUI...',
+    toastWorkflowExecutionComplete: 'Workflow execution complete!',
+    toastWorkflowExecutionFailed: (error: string) => `Workflow execution failed: ${error}`,
 
     // InputPanel.tsx
     describeWorkflow: 'Describe Your Workflow',
@@ -177,7 +179,6 @@ export const translations = {
     toastWorkflowProcessed: 'Workflow erfolgreich verarbeitet!',
     toastValidationError: 'Während der Validierung ist ein unbekannter Fehler aufgetreten.',
     toastComfyUrlNotSet: 'ComfyUI API URL nicht in den Einstellungen festgelegt. Bitte konfigurieren.',
-    toastWorkflowSent: 'Workflow erfolgreich an ComfyUI gesendet!',
     toastHistoryLoaded: 'Workflow aus dem Verlauf geladen.',
     toastWorkflowDownloaded: 'Workflow heruntergeladen.',
     toastCopied: 'Workflow-JSON in die Zwischenablage kopiert!',
@@ -190,6 +191,9 @@ export const translations = {
     toastImageUploadFailed: (error: string) => `Bild-Upload fehlgeschlagen: ${error}`,
     apiKeySetSuccess: 'API-Schlüssel erfolgreich gespeichert!',
     apiKeySetError: 'Speichern des API-Schlüssels fehlgeschlagen.',
+    toastSendingWorkflow: 'Sende Workflow an ComfyUI...',
+    toastWorkflowExecutionComplete: 'Workflow-Ausführung abgeschlossen!',
+    toastWorkflowExecutionFailed: (error: string) => `Workflow-Ausführung fehlgeschlagen: ${error}`,
     
     // InputPanel.tsx
     describeWorkflow: 'Beschreiben Sie Ihren Workflow',

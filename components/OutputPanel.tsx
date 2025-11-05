@@ -3,6 +3,7 @@ import WorkflowVisualizer from './WorkflowVisualizer';
 import type { GeneratedWorkflowResponse, ValidationLogEntry, DebugLogEntry } from '../types';
 import { DownloadIcon, ClipboardIcon, PlayIcon, BugAntIcon, Square2StackIcon } from './Icons';
 import { useTranslations } from '../hooks/useTranslations';
+import ProgressBarLoader from './Loader';
 
 interface OutputPanelProps {
   workflowData: GeneratedWorkflowResponse | null;
@@ -11,11 +12,13 @@ interface OutputPanelProps {
   onRun: () => void;
   onValidate: () => void;
   onLoad: () => void;
+  isLoading?: boolean;
+  loadingState?: { message: string, progress: number };
 }
 
 type Tab = 'visualizer' | 'workflow' | 'requirements' | 'logs';
 
-const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, onDownload, onCopy, onRun, onValidate, onLoad }) => {
+const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, onDownload, onCopy, onRun, onValidate, onLoad, isLoading = false, loadingState = {message: '', progress: 0} }) => {
   const [activeTab, setActiveTab] = useState<Tab>('visualizer');
   const t = useTranslations();
 
@@ -100,7 +103,7 @@ const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, onDownload, onC
   }
 
   return (
-    <div className="w-full lg:w-1/2 glass-panel rounded-2xl flex flex-col overflow-hidden">
+    <div className="relative w-full lg:w-1/2 glass-panel rounded-2xl flex flex-col overflow-hidden">
       <div className="flex-shrink-0 p-3 flex justify-between items-center border-b border-[var(--glass-border)]">
         <div className="flex space-x-1 bg-black/20 p-1 rounded-full">
           {tabConfig.map(tab => (
@@ -116,11 +119,11 @@ const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, onDownload, onC
           ))}
         </div>
         <div className="flex items-center space-x-2">
-            <button onClick={onValidate} title={t.tooltipValidate} className="p-2.5 bg-white/10 rounded-full hover:bg-white/20 transition-colors"><BugAntIcon className="w-5 h-5" /></button>
-            <button onClick={onRun} title={t.tooltipRun} className="p-2.5 bg-white/10 rounded-full hover:bg-white/20 transition-colors"><PlayIcon className="w-5 h-5" /></button>
-            <button onClick={onLoad} title={t.tooltipLoad} className="p-2.5 bg-white/10 rounded-full hover:bg-white/20 transition-colors"><Square2StackIcon className="w-5 h-5" /></button>
-            <button onClick={onCopy} title={t.tooltipCopy} className="p-2.5 bg-white/10 rounded-full hover:bg-white/20 transition-colors"><ClipboardIcon className="w-5 h-5" /></button>
-            <button onClick={onDownload} title={t.tooltipDownload} className="p-2.5 bg-teal-500/90 rounded-full hover:bg-teal-500 transition-colors"><DownloadIcon className="w-5 h-5" /></button>
+            <button onClick={onValidate} title={t.tooltipValidate} disabled={isLoading} className="p-2.5 bg-white/10 rounded-full hover:bg-white/20 transition-colors disabled:opacity-50"><BugAntIcon className="w-5 h-5" /></button>
+            <button onClick={onRun} title={t.tooltipRun} disabled={isLoading} className="p-2.5 bg-white/10 rounded-full hover:bg-white/20 transition-colors disabled:opacity-50"><PlayIcon className="w-5 h-5" /></button>
+            <button onClick={onLoad} title={t.tooltipLoad} disabled={isLoading} className="p-2.5 bg-white/10 rounded-full hover:bg-white/20 transition-colors disabled:opacity-50"><Square2StackIcon className="w-5 h-5" /></button>
+            <button onClick={onCopy} title={t.tooltipCopy} disabled={isLoading} className="p-2.5 bg-white/10 rounded-full hover:bg-white/20 transition-colors disabled:opacity-50"><ClipboardIcon className="w-5 h-5" /></button>
+            <button onClick={onDownload} title={t.tooltipDownload} disabled={isLoading} className="p-2.5 bg-teal-500/90 rounded-full hover:bg-teal-500 transition-colors disabled:opacity-50"><DownloadIcon className="w-5 h-5" /></button>
         </div>
       </div>
 
@@ -158,6 +161,11 @@ const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, onDownload, onC
             </div>
         )}
       </div>
+      {isLoading && (
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-10">
+          <ProgressBarLoader message={loadingState.message} progress={loadingState.progress} />
+        </div>
+      )}
     </div>
   );
 };

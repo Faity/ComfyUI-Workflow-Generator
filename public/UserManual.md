@@ -102,7 +102,7 @@ This is where the results of your requests are displayed.
 
 ### Controls (top right)
 -   **Validate & Correct (`🐛`):** Resubmits the current workflow to the AI for validation and correction. Useful if you've made manual changes or want a second opinion.
--   **Run (`▶️`):** Sends the workflow directly to your running ComfyUI instance for execution. **Important:** You must first configure the address of your ComfyUI API in the `Settings`!
+-   **Run (`▶️`):** Sends the workflow directly to your running ComfyUI instance for execution. **Important:** You must first configure the address of your ComfyUI API in the `Settings`! After starting, the application will display a **live progress bar** with status updates directly from ComfyUI, allowing you to track the progress of long-running generation jobs in real time.
 -   **Load Workflow in ComfyUI (`📋`):** Copies the workflow to your clipboard and shows an instruction. You can then simply paste the workflow into ComfyUI using Ctrl+V.
 -   **Copy JSON:** Copies the complete workflow JSON to your clipboard.
 -   **Download:** Downloads the workflow as a `.json` file.

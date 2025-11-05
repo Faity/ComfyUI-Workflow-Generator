@@ -102,7 +102,7 @@ Hier werden die Ergebnisse Ihrer Anfragen angezeigt.
 
 ### Steuerelemente (oben rechts)
 -   **Validieren & Korrigieren (`🐛`):** Sendet den aktuellen Workflow erneut zur Validierung und Korrektur an die KI. Nützlich, wenn Sie manuelle Änderungen vorgenommen haben oder eine zweite Meinung wünschen.
--   **Run (`▶️`):** Sendet den Workflow direkt an Ihre laufende ComfyUI-Instanz zur Ausführung. **Wichtig:** Sie müssen zuerst die Adresse Ihrer ComfyUI-API in den `Einstellungen` konfigurieren!
+-   **Run (`▶️`):** Sendet den Workflow direkt an Ihre laufende ComfyUI-Instanz zur Ausführung. **Wichtig:** Sie müssen zuerst die Adresse Ihrer ComfyUI-API in den `Einstellungen` konfigurieren! Nach dem Start zeigt die Anwendung einen **Live-Fortschrittsbalken** mit Status-Updates direkt von ComfyUI an, sodass Sie den Fortschritt von langwierigen Generierungsjobs in Echtzeit verfolgen können.
 -   **Workflow in ComfyUI laden (`📋`):** Kopiert den Workflow in die Zwischenablage und zeigt eine Anleitung an. Sie können den Workflow dann einfach in ComfyUI mit Strg+V einfügen.
 -   **Copy JSON:** Kopiert den vollständigen Workflow-JSON in Ihre Zwischenablage.
 -   **Download:** Lädt den Workflow als `.json`-Datei herunter.

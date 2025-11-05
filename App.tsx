@@ -229,12 +229,27 @@ const App: React.FC = () => {
       showToast(t.toastComfyUrlNotSet, 'error');
       return;
     }
-    try {
-      await executeWorkflow(generatedData.workflow, comfyUIUrl);
-      showToast(t.toastWorkflowSent, 'success');
-    } catch (error: any) {
-      showToast(error.message, 'error');
-    }
+    
+    setLoadingState({ active: true, message: t.toastSendingWorkflow, progress: 0 });
+
+    await executeWorkflow(
+      generatedData.workflow,
+      comfyUIUrl,
+      (status) => { // onProgress
+        setLoadingState({ active: true, message: status.message, progress: status.progress });
+      },
+      () => { // onComplete
+        showToast(t.toastWorkflowExecutionComplete, 'success');
+        // Keep the final progress bar at 100% for a moment before hiding
+        setTimeout(() => {
+            setLoadingState({ active: false, message: '', progress: 0 });
+        }, 1500);
+      },
+      (error) => { // onError
+        showToast(t.toastWorkflowExecutionFailed(error.message), 'error');
+        setLoadingState({ active: false, message: '', progress: 0 });
+      }
+    );
   };
 
   const handleSelectHistory = (entry: HistoryEntry) => {
@@ -384,8 +399,8 @@ const App: React.FC = () => {
         </header>
 
         <main className="flex-grow flex gap-4 overflow-hidden">
-          {loadingState.active ? (
-            <div className="w-full lg:w-1/2 glass-panel rounded-2xl flex items-center justify-center">
+          {loadingState.active && !generatedData ? (
+             <div className="w-full lg:w-1/2 glass-panel rounded-2xl flex items-center justify-center">
               <ProgressBarLoader message={loadingState.message} progress={loadingState.progress} />
             </div>
           ) : (
@@ -399,6 +414,8 @@ const App: React.FC = () => {
             onRun={handleRunWorkflow}
             onValidate={() => generatedData && handleValidation(JSON.stringify(generatedData.workflow), '')}
             onLoad={handleLoadWorkflow}
+            isLoading={loadingState.active && !!generatedData}
+            loadingState={loadingState}
           />
         </main>
         
