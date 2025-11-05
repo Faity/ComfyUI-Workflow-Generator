@@ -79,3 +79,11 @@ export interface HistoryEntry {
   timestamp: string;
   data: GeneratedWorkflowResponse;
 }
+
+export interface SystemInventory {
+  checkpoints?: string[];
+  loras?: string[];
+  vaes?: string[];
+  controlnet?: string[];
+  [key: string]: string[] | undefined;
+}

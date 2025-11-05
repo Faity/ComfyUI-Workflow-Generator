@@ -14,8 +14,9 @@ import SettingsModal from './components/SettingsModal';
 import ApiKeyModal from './components/ApiKeyModal';
 import { generateWorkflow, validateAndCorrectWorkflow, debugAndCorrectWorkflow } from './services/geminiService';
 import { executeWorkflow } from './services/comfyuiService';
+import { getServerInventory } from './services/localLlmService';
 import { initializeApiKey, saveApiKey } from './services/apiKeyService';
-import type { GeneratedWorkflowResponse, HistoryEntry, ComfyUIWorkflow } from './types';
+import type { GeneratedWorkflowResponse, HistoryEntry, ComfyUIWorkflow, SystemInventory } from './types';
 import { useLanguage } from './context/LanguageContext';
 import { useTranslations } from './hooks/useTranslations';
 
@@ -49,6 +50,7 @@ const App: React.FC = () => {
 
   // State
   const [isApiKeySet, setIsApiKeySet] = useState(false);
+  const [inventory, setInventory] = useState<SystemInventory | null>(null);
 
   // Settings
   const [comfyUIUrl, setComfyUIUrl] = useState<string>(() => localStorage.getItem('comfyUIUrl') || 'http://192.168.1.73:8188');
@@ -76,6 +78,23 @@ const App: React.FC = () => {
   
   useEffect(() => {
     localStorage.setItem('localLlmApiUrl', localLlmApiUrl);
+  }, [localLlmApiUrl]);
+  
+  useEffect(() => {
+    if (localLlmApiUrl) {
+      const fetchInventory = async () => {
+        try {
+          const inv = await getServerInventory(localLlmApiUrl);
+          setInventory(inv);
+        } catch (error) {
+          console.error("Failed to fetch server inventory", error);
+          setInventory(null);
+        }
+      };
+      fetchInventory();
+    } else {
+      setInventory(null);
+    }
   }, [localLlmApiUrl]);
 
   const showToast = (message: string, type: 'success' | 'error') => {
@@ -117,7 +136,7 @@ const App: React.FC = () => {
     try {
       // Step 1: Generation
       setLoadingState({ active: true, message: t.loadingStep1, progress: 25 });
-      const response = await generateWorkflow(prompt, localLlmApiUrl);
+      const response = await generateWorkflow(prompt, localLlmApiUrl, inventory);
       
       // Step 2: Validation
       setLoadingState({ active: true, message: t.loadingStep2, progress: 75 });

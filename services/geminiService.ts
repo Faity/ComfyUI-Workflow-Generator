@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import type { GeneratedWorkflowResponse, ComfyUIWorkflow, ValidationResponse, DebugResponse } from '../types';
+import type { GeneratedWorkflowResponse, ComfyUIWorkflow, ValidationResponse, DebugResponse, SystemInventory } from '../types';
 import { queryRag } from './localLlmService';
 
 const SYSTEM_INSTRUCTION_TEMPLATE = `You are an expert assistant specializing in ComfyUI, a node-based graphical user interface for Stable Diffusion.
@@ -8,40 +8,17 @@ const SYSTEM_INSTRUCTION_TEMPLATE = `You are an expert assistant specializing in
 [cite: 188]
 {{RAG_CONTEXT_PLACEHOLDER}}
 **IMPORTANT SYSTEM CONTEXT:**
-You MUST generate a workflow that is compatible with the following system configuration.
+You MUST generate a workflow that is compatible with the following system configuration and available models.
 [cite: 188] This means you should:
 [cite: 189] 1.  Consider the GPU VRAM limitations.
-[cite: 189] 2.  When a model is needed (e.g., a checkpoint, LoRA, VAE), use a plausible, common model name (e.g., 'sd_xl_base_1.0.safetensors', 'epicrealism_naturalSinRC1VAE.safetensors').
+[cite: 189] 2.  When a model is needed (e.g., a checkpoint, LoRA, VAE), you MUST use a model filename from the provided 'AVAILABLE SYSTEM INVENTORY' list. Do not invent filenames.
 [cite: 191] 3.  All output nodes (like 'SaveImage') MUST be configured to save into the specified 'output_path'.
 [cite: 193] Use the absolute path provided and feel free to add a filename prefix.
 [cite: 194] For example, in the SaveImage node, the first widget value should be the output path, like "/mnt/ki_io_data/ComfyUI_".
 [cite: 195]
-**SYSTEM CONFIGURATION:**
-\`\`\`json
-{
-  "system": {
-    "ram_gb": 256,
-    "gpus": [
-      {
-        "model": "NVIDIA GeForce RTX 4000 ADA",
-        "vram_gb": 20
-      },
-      {
-        "model": "NVIDIA GeForce RTX 3050 Low Profile",
-        "vram_gb": 4
-      }
-    ]
-  },
-  "storage": {
-    "comfyui_install_path": "/opt/ki_project/ComfyUI",
-   
-[cite: 197]  "extra_model_paths": [
-      "/mnt/comfyui_iscsi_data"
-    ],
-    "output_path": "/mnt/ki_io_data"
-  }
-}
-\`\`\`
+**AVAILABLE SYSTEM INVENTORY:**
+This is the inventory of models available on the local system. You MUST use model filenames from this list when building the workflow.
+{{SYSTEM_INVENTORY_PLACEHOLDER}}
 
 **QUALITY ASSURANCE & RFC COMPLIANCE:**
 Before providing the final JSON, you MUST internally simulate and validate the workflow to ensure its logical and structural integrity.
@@ -276,31 +253,43 @@ Example of the final JSON output structure:
 `;
 
 
-export const generateWorkflow = async (description: string, localLlmApiUrl: string): Promise<Omit<GeneratedWorkflowResponse, 'validationLog'>> => {
+export const generateWorkflow = async (description: string, localLlmApiUrl: string, inventory: SystemInventory | null): Promise<Omit<GeneratedWorkflowResponse, 'validationLog'>> => {
   if (!process.env.API_KEY) {
     throw new Error("API key is missing. Please set the API_KEY environment variable.");
   }
 
   let ragContextBlock = '';
-    if (localLlmApiUrl) {
-        try {
-            const ragContext = await queryRag(description, localLlmApiUrl);
-            if (ragContext && ragContext.trim()) {
-                ragContextBlock = `
+  if (localLlmApiUrl) {
+      try {
+          const ragContext = await queryRag(description, localLlmApiUrl);
+          if (ragContext && ragContext.trim()) {
+              ragContextBlock = `
 **RAG-KONTEXT:**
 Die folgenden Informationen wurden aus einer lokalen Wissensdatenbank abgerufen, um zusätzlichen Kontext für die Anfrage des Benutzers bereitzustellen. Verwenden Sie diese Informationen, um einen genaueren und relevanteren Workflow zu generieren.
 \`\`\`
 ${ragContext.trim()}
 \`\`\`
 `;
-            }
-        } catch (error) {
-            console.warn("Could not query RAG endpoint, proceeding without RAG context.", error);
-            // Non-fatal, just log and continue.
-        }
-    }
+          }
+      } catch (error) {
+          console.warn("Could not query RAG endpoint, proceeding without RAG context.", error);
+          // Non-fatal, just log and continue.
+      }
+  }
+
+  let inventoryBlock = 'No specific inventory provided. Use common, plausible model names.';
+  if (inventory && Object.keys(inventory).length > 0) {
+      inventoryBlock = `
+\`\`\`json
+${JSON.stringify(inventory, null, 2)}
+\`\`\`
+`;
+  }
     
-  const finalSystemInstruction = SYSTEM_INSTRUCTION_TEMPLATE.replace('{{RAG_CONTEXT_PLACEHOLDER}}', ragContextBlock);
+  const finalSystemInstruction = SYSTEM_INSTRUCTION_TEMPLATE
+    .replace('{{RAG_CONTEXT_PLACEHOLDER}}', ragContextBlock)
+    .replace('{{SYSTEM_INVENTORY_PLACEHOLDER}}', inventoryBlock);
+
 
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 

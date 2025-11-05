@@ -1,3 +1,5 @@
+import type { SystemInventory } from '../types';
+
 export const uploadRagDocument = async (file: File, apiUrl: string): Promise<{ message: string }> => {
     const formData = new FormData();
     formData.append('file', file);
@@ -75,6 +77,28 @@ export const startFineTuning = async (trainingData: string, apiUrl: string): Pro
         return await response.json();
     } catch (error) {
          if (error instanceof TypeError) { // Network error
+            throw new Error(`Failed to connect to local LLM at ${apiUrl}.`);
+        }
+        throw error;
+    }
+};
+
+export const getServerInventory = async (apiUrl: string): Promise<SystemInventory> => {
+    const endpoint = new URL('/v1/inventory', apiUrl).toString();
+
+    try {
+        const response = await fetch(endpoint, {
+            method: 'GET',
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: response.statusText }));
+            throw new Error(`Server error (${response.status}): ${errorData.detail}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        if (error instanceof TypeError) { // Network error
             throw new Error(`Failed to connect to local LLM at ${apiUrl}.`);
         }
         throw error;
