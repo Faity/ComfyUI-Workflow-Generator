@@ -13,7 +13,7 @@ import WorkflowWizardModal from './components/WorkflowWizardModal';
 import SettingsModal from './components/SettingsModal';
 import ApiKeyModal from './components/ApiKeyModal';
 import { generateWorkflow, validateAndCorrectWorkflow, debugAndCorrectWorkflow } from './services/geminiService';
-import { executeWorkflow } from './services/comfyuiService';
+import { executeWorkflow, uploadImage } from './services/comfyuiService';
 import { getServerInventory } from './services/localLlmService';
 import { initializeApiKey, saveApiKey } from './services/apiKeyService';
 import type { GeneratedWorkflowResponse, HistoryEntry, ComfyUIWorkflow, SystemInventory } from './types';
@@ -27,6 +27,7 @@ type LoadingState = { active: boolean; message: string; progress: number };
 
 const App: React.FC = () => {
   const [prompt, setPrompt] = useState<string>('');
+  const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [generatedData, setGeneratedData] = useState<GeneratedWorkflowResponse | null>(null);
   const [loadingState, setLoadingState] = useState<LoadingState>({ active: false, message: '', progress: 0 });
   const [mainView, setMainView] = useState<MainView>('generator');
@@ -132,11 +133,29 @@ const App: React.FC = () => {
     setGeneratedData(null);
     setSelectedHistoryId(null);
     let finalData: GeneratedWorkflowResponse | null = null;
+    let uploadedImageName: string | undefined = undefined;
+
+    if (uploadedImage) {
+        if (!comfyUIUrl) {
+            showToast(t.toastComfyUrlNotSet, 'error');
+            return;
+        }
+        try {
+            setLoadingState({ active: true, message: t.loadingUploadingImage, progress: 10 });
+            const uploadResponse = await uploadImage(uploadedImage, comfyUIUrl);
+            uploadedImageName = uploadResponse.name;
+            showToast(t.toastImageUploadSuccess, 'success');
+        } catch (error: any) {
+            showToast(t.toastImageUploadFailed(error.message || 'Unknown error'), 'error');
+            setLoadingState({ active: false, message: '', progress: 0 });
+            return;
+        }
+    }
 
     try {
       // Step 1: Generation
       setLoadingState({ active: true, message: t.loadingStep1, progress: 25 });
-      const response = await generateWorkflow(prompt, localLlmApiUrl, inventory);
+      const response = await generateWorkflow(prompt, localLlmApiUrl, inventory, uploadedImageName);
       
       // Step 2: Validation
       setLoadingState({ active: true, message: t.loadingStep2, progress: 75 });
@@ -223,6 +242,7 @@ const App: React.FC = () => {
     setGeneratedData(entry.data);
     setSelectedHistoryId(entry.id);
     setMainView('generator');
+    setUploadedImage(null); // Clear any uploaded image when loading from history
     showToast(t.toastHistoryLoaded, 'success');
   };
 
@@ -310,7 +330,7 @@ const App: React.FC = () => {
   const renderMainView = () => {
     switch(mainView) {
       case 'generator':
-        return <InputPanel prompt={prompt} setPrompt={setPrompt} onGenerate={handleGenerate} isLoading={loadingState.active} onOpenOptimizer={() => { if(ensureApiKey()) setIsOptimizerOpen(true); }} onOpenWizard={() => { if(ensureApiKey()) setIsWizardOpen(true); }} />;
+        return <InputPanel prompt={prompt} setPrompt={setPrompt} onGenerate={handleGenerate} isLoading={loadingState.active} onOpenOptimizer={() => { if(ensureApiKey()) setIsOptimizerOpen(true); }} onOpenWizard={() => { if(ensureApiKey()) setIsWizardOpen(true); }} uploadedImage={uploadedImage} setUploadedImage={setUploadedImage} />;
       case 'tester':
         return <TesterPanel onValidate={handleValidation} isLoading={loadingState.active} />;
       case 'history':

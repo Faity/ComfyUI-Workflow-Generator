@@ -87,3 +87,9 @@ export interface SystemInventory {
   controlnet?: string[];
   [key: string]: string[] | undefined;
 }
+
+export interface ComfyUIImageUploadResponse {
+  name: string;
+  subfolder: string;
+  type: 'input' | 'temp';
+}

@@ -41,7 +41,14 @@ Wenn Sie sich nicht sicher sind, wie Sie Ihren Prompt formulieren sollen, klicke
 ### 3. Workflow-Assistent
 Für technisch versierte Benutzer gibt es den `Workflow-Assistent`. Dieser Assistent führt Sie durch eine Reihe technischer Fragen (z.B. welches Modell, welcher Sampler), um einen präzisen, technischen Prompt zu erstellen, der für die Workflow-Generierung optimiert ist.
 
-### 4. Workflow generieren
+### 4. Bild hochladen (für Img2Img etc.)
+Unter dem Haupt-Eingabefeld finden Sie einen Bereich zum Hochladen von Bildern.
+
+-   **Zweck:** Diese Funktion ist unerlässlich für Workflows, die ein Eingangsbild benötigen, wie z.B. Image-to-Image, Inpainting oder die Verwendung von ControlNet.
+-   **Anwendung:** Ziehen Sie einfach eine Bilddatei per Drag & Drop in den markierten Bereich oder klicken Sie darauf, um eine Datei auszuwählen. Eine Vorschau des ausgewählten Bildes wird angezeigt. Mit dem Mülleimer-Symbol können Sie das Bild wieder entfernen.
+-   **Automatische Integration:** Wenn Sie einen Workflow mit einem hochgeladenen Bild generieren, erstellt die KI automatisch einen `LoadImage`-Knoten und konfiguriert ihn so, dass er Ihr hochgeladenes Bild verwendet und es zum Ausgangspunkt des Prozesses macht.
+
+### 5. Workflow generieren
 Wenn Sie mit Ihrer Beschreibung zufrieden sind, klicken Sie auf `Workflow generieren`. Eine Fortschrittsanzeige informiert Sie über die einzelnen Schritte: Die KI analysiert Ihre Anfrage, erstellt den Workflow und validiert ihn. Das Ergebnis erscheint im Ausgabefenster.
 
 ---
@@ -139,3 +146,8 @@ Um die höchste Zuverlässigkeit zu gewährleisten, durchläuft jeder generierte
 2.  **Graphen-Analyse:** Der Workflow wird als logischer Graph analysiert. Die KI stellt sicher, dass alle Verbindungen konsistent sind, alle benötigten Inputs verbunden sind und keine "verwaisten" Nodes existieren.
 3.  **Semantische Validierung:** Dies ist ein "Experten-Check". Die KI prüft die Einstellungen in wichtigen Nodes auf Plausibilität. Beispielsweise wird ein `CFG`-Wert von `0` in einem `KSampler`, der den Prompt ignorieren würde, automatisch zu einem sinnvollen Standardwert wie `8.0` korrigiert.
 4.  **RFC-Konformität & Schema-Validierung:** Jeder Workflow wird so erstellt, dass er den offiziellen ComfyUI RFCs und dem neuesten Zod-Schema entspricht. Dies garantiert maximale strukturelle Korrektheit und Kompatibilität.
+
+### Automatisierte Kontexterweiterung
+Wenn eine **Lokale LLM API URL** in den Einstellungen konfiguriert ist, erweitert die Suite automatisch ihre Fähigkeiten:
+-   **Retrieval-Augmented Generation (RAG):** Vor der Generierung eines Workflows fragt das System Ihre lokale Wissensdatenbank mit Ihrem Prompt ab. Werden relevante Informationen gefunden, werden diese der Haupt-KI als zusätzlicher Kontext zur Verfügung gestellt, was zu genaueren und maßgeschneiderten Workflows führt.
+-   **Dynamisches System-Inventar:** Die Anwendung ruft eine Echtzeit-Liste Ihrer verfügbaren Modelle (Checkpoints, LoRAs usw.) von Ihrem lokalen Server ab. Die KI wird dann angewiesen, **ausschließlich** Modell-Dateinamen aus dieser Liste zu verwenden, was Fehler durch halluzinierte oder nicht verfügbare Modellnamen drastisch reduziert.

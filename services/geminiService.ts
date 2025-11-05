@@ -7,6 +7,7 @@ const SYSTEM_INSTRUCTION_TEMPLATE = `You are an expert assistant specializing in
 [cite: 187] The user will communicate in German.
 [cite: 188]
 {{RAG_CONTEXT_PLACEHOLDER}}
+{{IMAGE_CONTEXT_PLACEHOLDER}}
 **IMPORTANT SYSTEM CONTEXT:**
 You MUST generate a workflow that is compatible with the following system configuration and available models.
 [cite: 188] This means you should:
@@ -253,7 +254,7 @@ Example of the final JSON output structure:
 `;
 
 
-export const generateWorkflow = async (description: string, localLlmApiUrl: string, inventory: SystemInventory | null): Promise<Omit<GeneratedWorkflowResponse, 'validationLog'>> => {
+export const generateWorkflow = async (description: string, localLlmApiUrl: string, inventory: SystemInventory | null, imageName?: string): Promise<Omit<GeneratedWorkflowResponse, 'validationLog'>> => {
   if (!process.env.API_KEY) {
     throw new Error("API key is missing. Please set the API_KEY environment variable.");
   }
@@ -277,6 +278,17 @@ ${ragContext.trim()}
       }
   }
 
+  let imageContextBlock = '';
+  if (imageName) {
+      imageContextBlock = `
+**USER-PROVIDED IMAGE CONTEXT:**
+The user has uploaded an image that is now available on the ComfyUI server.
+- Filename: \`${imageName}\`
+You MUST incorporate this image into the workflow by creating a "LoadImage" node. The "image" widget value for this node MUST be set to exactly "${imageName}".
+This "LoadImage" node should be the starting point for any image-to-image, inpainting, or ControlNet process described in the user's prompt.
+`;
+  }
+
   let inventoryBlock = 'No specific inventory provided. Use common, plausible model names.';
   if (inventory && Object.keys(inventory).length > 0) {
       inventoryBlock = `
@@ -288,6 +300,7 @@ ${JSON.stringify(inventory, null, 2)}
     
   const finalSystemInstruction = SYSTEM_INSTRUCTION_TEMPLATE
     .replace('{{RAG_CONTEXT_PLACEHOLDER}}', ragContextBlock)
+    .replace('{{IMAGE_CONTEXT_PLACEHOLDER}}', imageContextBlock)
     .replace('{{SYSTEM_INVENTORY_PLACEHOLDER}}', inventoryBlock);
 
 

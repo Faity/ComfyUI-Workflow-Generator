@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { ComfyUIWorkflow } from '../types';
+import type { ComfyUIWorkflow, ComfyUIImageUploadResponse } from '../types';
 
 /**
  * Sends a workflow to a ComfyUI instance for execution.
@@ -59,6 +59,46 @@ export const executeWorkflow = async (workflow: ComfyUIWorkflow, apiUrl: string)
             throw new Error(`Failed to connect to ComfyUI at ${apiUrl}. Please ensure the server is running, the URL is correct, and there are no CORS issues (try starting ComfyUI with '--enable-cors').`);
         }
         // Re-throw other errors (like the ones we created for non-ok responses)
+        throw error;
+    }
+};
+
+/**
+ * Uploads an image file to the ComfyUI server.
+ * @param imageFile The image file to upload.
+ * @param apiUrl The base URL of the ComfyUI API.
+ * @returns The JSON response from the server, containing the filename.
+ */
+export const uploadImage = async (imageFile: File, apiUrl: string): Promise<ComfyUIImageUploadResponse> => {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    formData.append('overwrite', 'true'); // Prevent errors if a file with the same name exists
+
+    let endpoint: string;
+    try {
+        endpoint = new URL('/upload/image', apiUrl).toString();
+    } catch (e) {
+        throw new Error(`Invalid ComfyUI URL provided: ${apiUrl}`);
+    }
+
+    try {
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!response.ok) {
+            let errorBody = 'Could not read error body.';
+            try {
+                errorBody = await response.text();
+            } catch {}
+            throw new Error(`ComfyUI image upload error (${response.status}):\n${errorBody}`);
+        }
+        return await response.json();
+    } catch (error) {
+        if (error instanceof TypeError) {
+             throw new Error(`Failed to connect to ComfyUI at ${apiUrl} for image upload. Please check server status and CORS settings.`);
+        }
         throw error;
     }
 };

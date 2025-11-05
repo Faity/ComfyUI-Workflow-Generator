@@ -41,7 +41,14 @@ If you're unsure how to phrase your prompt, click the `Prompt Assistant` button.
 ### 3. Workflow Wizard
 For technically inclined users, the `Workflow Wizard` guides you through a series of technical questions (e.g., which model, which sampler) to construct a precise, technical prompt optimized for workflow generation.
 
-### 4. Generate Workflow
+### 4. Image Upload (for Img2Img, etc.)
+Below the main prompt area, you will find an image upload section.
+
+-   **Purpose:** This feature is essential for workflows that require an input image, such as Image-to-Image, Inpainting, or using ControlNet.
+-   **How to Use:** Simply drag and drop an image file into the designated area, or click on it to open a file selector. A preview of the selected image will be displayed. You can remove the image by clicking the trash icon.
+-   **Automatic Integration:** When you generate a workflow with an image uploaded, the AI will automatically create a `LoadImage` node and configure it to use your uploaded image, making it the starting point of the process.
+
+### 5. Generate Workflow
 Once you're satisfied with your description, click `Generate Workflow`. A progress bar will inform you about the individual steps: The AI analyzes your request, creates the workflow, and validates it. The result appears in the output panel.
 
 ---
@@ -139,3 +146,8 @@ To ensure the highest reliability, every generated or corrected workflow undergo
 2.  **Graph Analysis:** The workflow is analyzed as a logical graph. The AI ensures all connections are consistent, all required inputs are connected, and no "orphan" nodes exist.
 3.  **Semantic Validation:** This is an "expert check." The AI checks the settings in key nodes for plausibility. For example, a `CFG` value of `0` in a `KSampler`, which would ignore the prompt, is automatically corrected to a sensible default like `8.0`.
 4.  **RFC Compliance & Schema Validation:** Every workflow is built to comply with the official ComfyUI RFCs and the latest Zod schema. This guarantees maximum structural correctness and compatibility.
+
+### Automated Context Enhancement
+When a **Local LLM API URL** is configured in the settings, the suite automatically enhances its capabilities:
+-   **Retrieval-Augmented Generation (RAG):** Before generating a workflow, the system queries your local knowledge base with your prompt. If relevant information is found, it is provided to the main AI as extra context, leading to more accurate and tailored workflows.
+-   **Dynamic System Inventory:** The application fetches a real-time list of your available models (checkpoints, LoRAs, etc.) from your local server. The AI is then instructed to **only** use model filenames from this list, drastically reducing errors caused by hallucinated or unavailable model names.
