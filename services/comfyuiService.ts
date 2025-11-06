@@ -147,34 +147,39 @@ export const uploadImage = async (imageFile: File, apiUrl: string): Promise<Comf
 export const testComfyUIConnection = async (apiUrl: string): Promise<{ success: boolean; message: string; data?: any; isCorsError?: boolean; }> => {
     let endpoint: string;
     try {
-        // We test against an endpoint we know exists, like system_stats
-        endpoint = new URL('/system_stats', apiUrl).toString();
+        // The /prompt endpoint is the correct one for POST requests.
+        endpoint = new URL('/prompt', apiUrl).toString();
     } catch (e) {
         return { success: false, message: `Invalid URL format: ${apiUrl}` };
     }
 
     try {
-        // We use a POST request with a JSON content type to force a CORS preflight request,
-        // which is what happens during the actual executeWorkflow call. This gives a more accurate test.
+        // This is a "real" test. We send a minimal, valid prompt payload to the actual
+        // endpoint used for execution. This correctly triggers a CORS preflight and
+        // verifies that the server accepts the request format.
+        const clientId = uuidv4();
+        // A minimal prompt is just a client_id and an empty prompt object.
+        const testPayload = {
+            client_id: clientId,
+            prompt: {},
+        };
+
         const response = await fetch(endpoint, { 
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({}),
+            body: JSON.stringify(testPayload),
         });
 
-        // A 405 (Method Not Allowed) response is a good sign here.
-        // It means the CORS preflight succeeded and the server is reachable,
-        // but it just doesn't accept POST on this specific endpoint. This confirms connectivity.
-        if (response.ok || response.status === 405) {
-             try {
-                const data = await response.json();
-                 return { success: true, message: 'Connection to ComfyUI successful!', data };
-             } catch (e) {
-                // This can happen on a 405 response where the body is not JSON, which is fine.
-                 return { success: true, message: 'Connection to ComfyUI successful!' };
-             }
+        if (response.ok) {
+            const data = await response.json();
+            // A successful response to /prompt includes a prompt_id.
+            if (data.prompt_id) {
+                return { success: true, message: 'Connection to ComfyUI successful!', data };
+            } else {
+                 return { success: false, message: 'Connected, but server returned an unexpected response.', data };
+            }
         } else {
              return { 
                 success: false, 
@@ -184,11 +189,12 @@ export const testComfyUIConnection = async (apiUrl: string): Promise<{ success: 
 
     } catch (error) {
         if (error instanceof TypeError) {
-            // This is the most common error for CORS or network issues
+            // This is the most common error for CORS or network issues.
+            // Because we are now testing the correct endpoint, this is a reliable indicator.
             return { 
                 success: false, 
                 isCorsError: true,
-                message: `Network error. Could not connect to ${apiUrl}. Please ensure the server is running, the URL is correct, and CORS is enabled (try starting ComfyUI with the '--enable-cors' flag). This test realistically simulates a 'Run' request and has failed.`
+                message: `Network error. Could not connect to ${apiUrl}. Please ensure the server is running, the URL is correct, and CORS is enabled (try starting ComfyUI with the '--enable-cors' flag).`
             };
         }
          if (error instanceof SyntaxError) {

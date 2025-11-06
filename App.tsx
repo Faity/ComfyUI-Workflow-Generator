@@ -318,25 +318,28 @@ const App: React.FC = () => {
         'public/Bedienungsanleitung.md', 'public/UserManual.md'
     ];
 
-    let combinedContent = '';
-
-    for (const path of filePaths) {
-        try {
-            const response = await fetch('/' + path);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            const content = await response.text();
-            combinedContent += `--- START OF FILE ${path} ---\n\n${content}\n\n--- END OF FILE ${path} ---\n\n\n`;
-        } catch (error) {
-            console.error(`Failed to fetch ${path}:`, error);
-            combinedContent += `--- START OF FILE ${path} ---\n\n[Could not load file content]\n\n--- END OF FILE ${path} ---\n\n\n`;
-        }
-    }
+    const fileContents = await Promise.all(
+        filePaths.map(async (path) => {
+            try {
+                const response = await fetch('/' + path);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const content = await response.text();
+                return `--- START OF FILE ${path} ---\n\n${content}\n\n--- END OF FILE ${path} ---\n\n\n`;
+            } catch (error) {
+                console.error(`Failed to fetch ${path}:`, error);
+                return `--- START OF FILE ${path} ---\n\n[Could not load file content]\n\n--- END OF FILE ${path} ---\n\n\n`;
+            }
+        })
+    );
+    
+    const header = `// AI ComfyUI Workflow Suite - Source Code Dump\n// Version: ${version}\n// Downloaded on: ${new Date().toISOString()}\n\n\n`;
+    const combinedContent = header + fileContents.join('');
     
     const blob = new Blob([combinedContent], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `comfyui-workflow-suite-source.txt`;
+    a.download = `comfyui-workflow-suite-source-v${version}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
