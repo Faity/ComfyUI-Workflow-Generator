@@ -145,6 +145,10 @@ export const translations = {
     settingsTestStatusTesting: 'Testing...',
     settingsTestStatusSuccess: 'Connection successful!',
     settingsTestStatusError: 'Connection failed.',
+    settingsCorsDetected: 'CORS Issue Detected',
+    settingsCorsExplanation: 'The browser is blocking the connection for security reasons. To fix this, you need to start ComfyUI with an additional launch parameter.',
+    settingsCorsSolutionHtml: 'Add the `<code class="bg-black/50 px-1 py-0.5 rounded text-white">--enable-cors</code>` flag to your startup file (e.g., `run_nvidia_gpu.bat`) and restart ComfyUI.',
+
 
     // DocumentationPanel.tsx
     docLoading: 'Loading documentation...',
@@ -305,6 +309,9 @@ export const translations = {
     settingsTestStatusTesting: 'Teste...',
     settingsTestStatusSuccess: 'Verbindung erfolgreich!',
     settingsTestStatusError: 'Verbindung fehlgeschlagen.',
+    settingsCorsDetected: 'CORS-Problem erkannt',
+    settingsCorsExplanation: 'Der Browser blockiert die Verbindung aus Sicherheitsgründen. Um dies zu beheben, müssen Sie ComfyUI mit einem zusätzlichen Startparameter starten.',
+    settingsCorsSolutionHtml: 'Fügen Sie Ihrer Startdatei (z.B. `run_nvidia_gpu.bat`) das Flag `<code class="bg-black/50 px-1 py-0.5 rounded text-white">--enable-cors</code>` hinzu und starten Sie ComfyUI neu.',
 
     // DocumentationPanel.tsx
     docLoading: 'Dokumentation wird geladen...',

@@ -117,13 +117,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
                 </div>
                 {isCorsError && (
                     <div className="mt-3 p-4 bg-yellow-900/40 border border-yellow-500/50 rounded-lg text-yellow-200 text-sm">
-                        <p className="font-bold mb-2">CORS-Problem erkannt</p>
+                        <p className="font-bold mb-2">{t.settingsCorsDetected}</p>
                         <p className="text-xs">
-                            Der Browser blockiert die Verbindung aus Sicherheitsgründen. Um dies zu beheben, müssen Sie ComfyUI mit einem zusätzlichen Startparameter starten.
+                            {t.settingsCorsExplanation}
                         </p>
-                        <p className="mt-2 text-xs">
-                            Fügen Sie Ihrer Startdatei (z.B. `run_nvidia_gpu.bat`) das Flag <code className="bg-black/50 px-1 py-0.5 rounded text-white">--enable-cors</code> hinzu und starten Sie ComfyUI neu.
-                        </p>
+                        <p className="mt-2 text-xs" dangerouslySetInnerHTML={{ __html: t.settingsCorsSolutionHtml }} />
                     </div>
                 )}
                 {comfyTestStatus === 'error' && !isCorsError && <p className="mt-2 text-xs text-red-300 bg-red-900/30 p-2 rounded-md">{comfyTestMessage}</p>}
