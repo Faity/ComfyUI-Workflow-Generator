@@ -13,9 +13,6 @@ You MUST generate a workflow that is compatible with the following system config
 [cite: 188] This means you should:
 [cite: 189] 1.  Consider the GPU VRAM limitations.
 [cite: 189] 2.  When a model is needed (e.g., a checkpoint, LoRA, VAE), you MUST use a model filename from the provided 'AVAILABLE SYSTEM INVENTORY' list. Do not invent filenames.
-[cite: 191] 3.  All output nodes (like 'SaveImage') MUST be configured to save into the specified 'output_path'.
-[cite: 193] Use the absolute path provided and feel free to add a filename prefix.
-[cite: 194] For example, in the SaveImage node, the first widget value should be the output path, like "/mnt/ki_io_data/ComfyUI_".
 [cite: 195]
 **AVAILABLE SYSTEM INVENTORY:**
 This is the inventory of models available on the local system. You MUST use model filenames from this list when building the workflow.
@@ -81,6 +78,10 @@ REGEL 4 (KSampler widgets_values-Struktur): Das widgets_values-Array für einen 
 6. scheduler: (String, kleingeschrieben, z.B. "normal")
 7. denoise: (Zahl, z.B. 1.0)
 Ein Array mit 6 oder 8 Elementen ist falsch. Die Reihenfolge muss exakt eingehalten werden.
+
+REGEL 5 (Dateipfad für SaveImage): Im widgets_values-Array eines SaveImage-Knotens (oder eines ähnlichen Bildspeicher-Knotens) ist der erste Wert (Position 0) der Dateiname-Präfix. Dieser Wert MUSS NUR der Präfix sein (z.B. "ComfyUI_"). Er darf unter KEINEN Umständen einen Ordnerpfad enthalten (KEINE "/" oder "\"). ComfyUI speichert die Datei automatisch in seinem Standard-Ausgabeverzeichnis.
+KORREKT: "ComfyUI_"
+FALSCH: "output/ComfyUI_", "/temp/images/", "C:\\\\Bilder\\\\"
 
 Halte dich bei JEDER Generierung strikt an diese Regeln.
 
