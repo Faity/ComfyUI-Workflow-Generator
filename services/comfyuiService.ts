@@ -147,39 +147,23 @@ export const uploadImage = async (imageFile: File, apiUrl: string): Promise<Comf
 export const testComfyUIConnection = async (apiUrl: string): Promise<{ success: boolean; message: string; data?: any; isCorsError?: boolean; }> => {
     let endpoint: string;
     try {
-        // The /prompt endpoint is the correct one for POST requests.
-        endpoint = new URL('/prompt', apiUrl).toString();
+        // Use the /system_stats endpoint for a simple GET request test.
+        endpoint = new URL('/system_stats', apiUrl).toString();
     } catch (e) {
         return { success: false, message: `Invalid URL format: ${apiUrl}` };
     }
 
     try {
-        // This is a "real" test. We send a minimal, valid prompt payload to the actual
-        // endpoint used for execution. This correctly triggers a CORS preflight and
-        // verifies that the server accepts the request format.
-        const clientId = uuidv4();
-        // A minimal prompt is just a client_id and an empty prompt object.
-        const testPayload = {
-            client_id: clientId,
-            prompt: {},
-        };
-
+        // A simple GET request to /system_stats is a reliable way to check
+        // for connectivity and CORS issues without needing a valid prompt payload.
         const response = await fetch(endpoint, { 
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(testPayload),
+            method: 'GET'
         });
 
         if (response.ok) {
             const data = await response.json();
-            // A successful response to /prompt includes a prompt_id.
-            if (data.prompt_id) {
-                return { success: true, message: 'Connection to ComfyUI successful!', data };
-            } else {
-                 return { success: false, message: 'Connected, but server returned an unexpected response.', data };
-            }
+            // A successful response from /system_stats confirms the server is reachable and responsive.
+            return { success: true, message: 'Connection to ComfyUI successful!', data };
         } else {
              return { 
                 success: false, 
@@ -189,8 +173,7 @@ export const testComfyUIConnection = async (apiUrl: string): Promise<{ success: 
 
     } catch (error) {
         if (error instanceof TypeError) {
-            // This is the most common error for CORS or network issues.
-            // Because we are now testing the correct endpoint, this is a reliable indicator.
+            // A TypeError on a fetch request is the most common browser error for CORS or network issues.
             return { 
                 success: false, 
                 isCorsError: true,
