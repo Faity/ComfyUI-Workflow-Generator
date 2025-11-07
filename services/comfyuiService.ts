@@ -47,7 +47,13 @@ export const executeWorkflow = async (
         }
         promptId = jsonResponse.prompt_id;
     } catch (error: any) {
-        onError(error);
+        if (error instanceof TypeError) {
+            // A TypeError on a fetch request is the most common browser error for CORS or network issues.
+            const enhancedError = new Error(`Network error. Could not connect to ${apiUrl}. Please ensure the server is running and CORS is enabled (try starting ComfyUI with the '--enable-cors' flag).`);
+            onError(enhancedError);
+        } else {
+            onError(error);
+        }
         return;
     }
   
