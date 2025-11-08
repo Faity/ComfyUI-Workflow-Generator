@@ -1,10 +1,11 @@
 import type { SystemInventory } from '../types';
+import type { RagProvider } from '../App';
 
-export const uploadRagDocument = async (file: File, apiUrl: string): Promise<{ message: string }> => {
+export const uploadRagDocument = async (file: File, apiUrl: string, provider: RagProvider): Promise<{ message: string }> => {
     const formData = new FormData();
     formData.append('file', file);
 
-    const endpoint = new URL('/v1/rag/upload', apiUrl).toString();
+    const endpoint = new URL(provider === 'privateGPT' ? '/v1/ingest' : '/v1/rag/upload', apiUrl).toString();
 
     try {
         const response = await fetch(endpoint, {
@@ -17,7 +18,14 @@ export const uploadRagDocument = async (file: File, apiUrl: string): Promise<{ m
             throw new Error(`Server error (${response.status}): ${errorData.detail}`);
         }
 
-        return await response.json();
+        const responseData = await response.json();
+
+        if (provider === 'privateGPT') {
+            const count = Array.isArray(responseData.data) ? responseData.data.length : 0;
+            return { message: `Successfully ingested ${count} document(s).` };
+        }
+
+        return responseData;
 
     } catch (error) {
         if (error instanceof TypeError) { // Network error
@@ -27,28 +35,43 @@ export const uploadRagDocument = async (file: File, apiUrl: string): Promise<{ m
     }
 };
 
-export const queryRag = async (prompt: string, apiUrl: string): Promise<string> => {
-    const endpoint = new URL('/v1/rag/query', apiUrl).toString();
-    const payload = { query: prompt };
-
+export const queryRag = async (prompt: string, apiUrl: string, provider: RagProvider): Promise<string> => {
     try {
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload),
-        });
+        if (provider === 'privateGPT') {
+            const endpoint = new URL('/v1/chat/completions', apiUrl).toString();
+            const payload = {
+                model: "local-model",
+                messages: [{ role: "user", content: prompt }],
+                use_context: true,
+                include_sources: false,
+            };
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: response.statusText }));
+                throw new Error(`Server error (${response.status}): ${errorData.detail}`);
+            }
+            const responseData = await response.json();
+            return responseData.choices?.[0]?.message?.content || '';
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ detail: response.statusText }));
-            throw new Error(`Server error (${response.status}): ${errorData.detail}`);
+        } else { // Default provider
+            const endpoint = new URL('/v1/rag/query', apiUrl).toString();
+            const payload = { query: prompt };
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: response.statusText }));
+                throw new Error(`Server error (${response.status}): ${errorData.detail}`);
+            }
+            const responseData = await response.json();
+            return responseData.response || responseData.detail || '';
         }
-
-        const responseData = await response.json();
-        // Assuming the server returns a JSON object with a 'response' or 'detail' key containing the text
-        return responseData.response || responseData.detail || '';
-
     } catch (error) {
         if (error instanceof TypeError) { // Network error
             throw new Error(`Failed to connect to local LLM at ${apiUrl}.`);

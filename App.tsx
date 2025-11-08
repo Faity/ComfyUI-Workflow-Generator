@@ -26,6 +26,8 @@ const version = "1.1.0";
 type MainView = 'generator' | 'tester' | 'history' | 'local_llm' | 'documentation';
 type ToastState = { id: string; message: string; type: 'success' | 'error' };
 type LoadingState = { active: boolean; message: string; progress: number };
+export type RagProvider = 'default' | 'privateGPT';
+
 
 const App: React.FC = () => {
   const [prompt, setPrompt] = useState<string>('');
@@ -58,6 +60,7 @@ const App: React.FC = () => {
   // Settings
   const [comfyUIUrl, setComfyUIUrl] = useState<string>(() => localStorage.getItem('comfyUIUrl') || 'http://192.168.1.73:8188');
   const [localLlmApiUrl, setLocalLlmApiUrl] = useState<string>(() => localStorage.getItem('localLlmApiUrl') || '');
+  const [ragProvider, setRagProvider] = useState<RagProvider>(() => (localStorage.getItem('ragProvider') as RagProvider) || 'default');
 
   const { language, setLanguage } = useLanguage();
   const t = useTranslations();
@@ -82,6 +85,10 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('localLlmApiUrl', localLlmApiUrl);
   }, [localLlmApiUrl]);
+  
+  useEffect(() => {
+    localStorage.setItem('ragProvider', ragProvider);
+  }, [ragProvider]);
   
   useEffect(() => {
     if (localLlmApiUrl) {
@@ -157,7 +164,7 @@ const App: React.FC = () => {
     try {
       // Step 1: Generation
       setLoadingState({ active: true, message: t.loadingStep1, progress: 25 });
-      const response = await generateWorkflow(prompt, localLlmApiUrl, inventory, uploadedImageName);
+      const response = await generateWorkflow(prompt, localLlmApiUrl, inventory, uploadedImageName, ragProvider);
       
       // Step 2: Validation
       setLoadingState({ active: true, message: t.loadingStep2, progress: 75 });
@@ -356,7 +363,7 @@ const App: React.FC = () => {
       case 'history':
         return <HistoryPanel history={history} selectedHistoryId={selectedHistoryId} onSelect={handleSelectHistory} onClear={() => setHistory([])} onDownload={(entry) => handleDownload(entry.data)} />;
       case 'local_llm':
-        return <LocalLlmPanel apiUrl={localLlmApiUrl} showToast={showToast} />;
+        return <LocalLlmPanel apiUrl={localLlmApiUrl} showToast={showToast} ragProvider={ragProvider} />;
       case 'documentation':
         return <DocumentationPanel />;
       default:
@@ -438,6 +445,8 @@ const App: React.FC = () => {
             setComfyUIUrl={setComfyUIUrl}
             localLlmApiUrl={localLlmApiUrl}
             setLocalLlmApiUrl={setLocalLlmApiUrl}
+            ragProvider={ragProvider}
+            setRagProvider={setRagProvider}
             onDownloadSourceCode={handleDownloadSourceCode}
             version={version}
         />

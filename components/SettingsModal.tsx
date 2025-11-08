@@ -3,6 +3,7 @@ import { useTranslations } from '../hooks/useTranslations';
 import { DownloadIcon, CheckCircleIcon, ExclamationCircleIcon } from './Icons';
 import { testComfyUIConnection } from '../services/comfyuiService';
 import { testLocalLlmConnection } from '../services/localLlmService';
+import type { RagProvider } from '../App';
 
 
 interface SettingsModalProps {
@@ -12,13 +13,15 @@ interface SettingsModalProps {
   setComfyUIUrl: (url: string) => void;
   localLlmApiUrl: string;
   setLocalLlmApiUrl: (url: string) => void;
+  ragProvider: RagProvider;
+  setRagProvider: (provider: RagProvider) => void;
   onDownloadSourceCode: () => void;
   version: string;
 }
 
 type TestStatus = 'idle' | 'testing' | 'success' | 'error';
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIUrl, setComfyUIUrl, localLlmApiUrl, setLocalLlmApiUrl, onDownloadSourceCode, version }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIUrl, setComfyUIUrl, localLlmApiUrl, setLocalLlmApiUrl, ragProvider, setRagProvider, onDownloadSourceCode, version }) => {
   const t = useTranslations();
   const [comfyTestStatus, setComfyTestStatus] = useState<TestStatus>('idle');
   const [comfyTestMessage, setComfyTestMessage] = useState<string>('');
@@ -152,18 +155,39 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
                     {t.settingsLocalLlmUrlHelp}
                 </p>
             </div>
-             <div className="border-t border-[var(--glass-border)] pt-6">
-                 <h3 className="text-md font-semibold text-gray-200 mb-1">{t.settingsDownloadSource}</h3>
-                 <p className="mt-1 text-xs text-gray-400 mb-3">
-                    {t.settingsDownloadSourceHelp}
-                 </p>
-                 <button
-                    onClick={onDownloadSourceCode}
-                    className="w-full flex items-center justify-center px-4 py-2 bg-white/10 text-white font-semibold rounded-lg hover:bg-white/20 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-teal-500"
-                >
-                    <DownloadIcon className="w-5 h-5 mr-2" />
-                    {t.settingsDownloadSource}
-                </button>
+             <div className="border-t border-[var(--glass-border)] pt-6 space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">{t.settingsRagProvider}</label>
+                    <div className="flex space-x-1 bg-black/20 p-1 rounded-full">
+                        <button 
+                            onClick={() => setRagProvider('default')}
+                            className={`w-1/2 rounded-full py-1.5 text-sm transition-colors ${ragProvider === 'default' ? 'bg-sky-500/80 text-white shadow-sm' : 'text-gray-300 hover:bg-white/10'}`}
+                        >
+                            {t.settingsRagProviderDefault}
+                        </button>
+                        <button 
+                            onClick={() => setRagProvider('privateGPT')}
+                            className={`w-1/2 rounded-full py-1.5 text-sm transition-colors ${ragProvider === 'privateGPT' ? 'bg-sky-500/80 text-white shadow-sm' : 'text-gray-300 hover:bg-white/10'}`}
+                        >
+                            {t.settingsRagProviderPrivateGpt}
+                        </button>
+                    </div>
+                    <p className="mt-2 text-xs text-gray-400">{t.settingsRagProviderHelp}</p>
+                </div>
+
+                 <div>
+                     <h3 className="text-md font-semibold text-gray-200 mb-1">{t.settingsDownloadSource}</h3>
+                     <p className="mt-1 text-xs text-gray-400 mb-3">
+                        {t.settingsDownloadSourceHelp}
+                     </p>
+                     <button
+                        onClick={onDownloadSourceCode}
+                        className="w-full flex items-center justify-center px-4 py-2 bg-white/10 text-white font-semibold rounded-lg hover:bg-white/20 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-teal-500"
+                    >
+                        <DownloadIcon className="w-5 h-5 mr-2" />
+                        {t.settingsDownloadSource}
+                    </button>
+                </div>
             </div>
         </div>
 
