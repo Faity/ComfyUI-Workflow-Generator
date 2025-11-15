@@ -26,6 +26,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
   const [comfyTestStatus, setComfyTestStatus] = useState<TestStatus>('idle');
   const [comfyTestMessage, setComfyTestMessage] = useState<string>('');
   const [isCorsError, setIsCorsError] = useState<boolean>(false);
+  const [isMixedContentError, setIsMixedContentError] = useState<boolean>(false);
   const [llmTestStatus, setLlmTestStatus] = useState<TestStatus>('idle');
   const [llmTestMessage, setLlmTestMessage] = useState<string>('');
 
@@ -33,6 +34,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
   useEffect(() => {
     setComfyTestStatus('idle');
     setIsCorsError(false);
+    setIsMixedContentError(false);
   }, [comfyUIUrl]);
 
   useEffect(() => {
@@ -45,11 +47,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
   const handleTestComfyUI = async () => {
     setComfyTestStatus('testing');
     setIsCorsError(false);
+    setIsMixedContentError(false);
     const result = await testComfyUIConnection(comfyUIUrl);
     setComfyTestMessage(result.message);
     setComfyTestStatus(result.success ? 'success' : 'error');
     if (result.isCorsError) {
         setIsCorsError(true);
+    }
+    if (result.isMixedContentError) {
+        setIsMixedContentError(true);
     }
   };
 
@@ -118,7 +124,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
                         {t.settingsTestConnection}
                     </button>
                 </div>
-                {isCorsError && (
+                {isMixedContentError && (
+                    <div className="mt-3 p-4 bg-orange-900/40 border border-orange-500/50 rounded-lg text-orange-200 text-sm">
+                        <p className="font-bold mb-2">{t.settingsMixedContentDetected}</p>
+                        <p className="text-xs mb-2">
+                            {t.settingsMixedContentExplanation}
+                        </p>
+                        <p className="mt-2 text-xs" dangerouslySetInnerHTML={{ __html: t.settingsMixedContentSolutionHtml }} />
+                    </div>
+                )}
+                {isCorsError && !isMixedContentError && (
                     <div className="mt-3 p-4 bg-yellow-900/40 border border-yellow-500/50 rounded-lg text-yellow-200 text-sm">
                         <p className="font-bold mb-2">{t.settingsCorsDetected}</p>
                         <p className="text-xs">
@@ -127,7 +142,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
                         <p className="mt-2 text-xs" dangerouslySetInnerHTML={{ __html: t.settingsCorsSolutionHtml }} />
                     </div>
                 )}
-                {comfyTestStatus === 'error' && !isCorsError && <p className="mt-2 text-xs text-red-300 bg-red-900/30 p-2 rounded-md">{comfyTestMessage}</p>}
+                {comfyTestStatus === 'error' && !isCorsError && !isMixedContentError && <p className="mt-2 text-xs text-red-300 bg-red-900/30 p-2 rounded-md">{comfyTestMessage}</p>}
                 {comfyTestStatus === 'success' && <p className="mt-2 text-xs text-green-300">{comfyTestMessage}</p>}
                 <p className="mt-2 text-xs text-gray-400">
                     {t.settingsComfyUrlHelp}

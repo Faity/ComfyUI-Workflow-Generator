@@ -6,6 +6,22 @@ interface ProgressStatus {
   progress: number;
 }
 
+const getNetworkError = (error: TypeError, apiUrl: string, context: string): Error => {
+    let message;
+    try {
+        const url = new URL(apiUrl);
+        if (window.location.protocol === 'https:' && url.protocol === 'http:') {
+            message = `Mixed Content Error during ${context}: This application is secure (HTTPS), but your ComfyUI URL is not (HTTP). Browsers block these requests. Please check the Settings panel for a solution.`;
+        } else {
+            message = `Network Error during ${context} to ${apiUrl}. Please check: 1) The URL is correct. 2) The ComfyUI server is running. 3) CORS is enabled by starting ComfyUI with the '--enable-cors' flag.`;
+        }
+    } catch (e) {
+        message = `Invalid URL provided for ${context}: ${apiUrl}.`;
+    }
+    return new Error(message);
+};
+
+
 /**
  * Sends a workflow to a ComfyUI instance and listens for real-time progress via WebSocket.
  * @param workflow The ComfyUI workflow object.
@@ -48,9 +64,7 @@ export const executeWorkflow = async (
         promptId = jsonResponse.prompt_id;
     } catch (error: any) {
         if (error instanceof TypeError) {
-            // A TypeError on a fetch request is the most common browser error for CORS or network issues.
-            const enhancedError = new Error(`Network error. Could not connect to ${apiUrl}. Please ensure the server is running and CORS is enabled (try starting ComfyUI with the '--enable-cors' flag).`);
-            onError(enhancedError);
+            onError(getNetworkError(error, apiUrl, 'workflow execution'));
         } else {
             onError(error);
         }
@@ -143,34 +157,46 @@ export const uploadImage = async (imageFile: File, apiUrl: string): Promise<Comf
         return await response.json();
     } catch (error) {
         if (error instanceof TypeError) {
-             throw new Error(`Failed to connect to ComfyUI at ${apiUrl} for image upload. Please check server status and CORS settings.`);
+            throw getNetworkError(error, apiUrl, 'image upload');
         }
         throw error;
     }
 };
 
 
-export const testComfyUIConnection = async (apiUrl: string): Promise<{ success: boolean; message: string; data?: any; isCorsError?: boolean; }> => {
+export const testComfyUIConnection = async (apiUrl: string): Promise<{ success: boolean; message: string; data?: any; isCorsError?: boolean; isMixedContentError?: boolean; }> => {
     let endpoint: string;
     try {
-        // Use the /system_stats endpoint for a simple GET request test.
-        endpoint = new URL('/system_stats', apiUrl).toString();
+        // We now target the /prompt endpoint to accurately simulate a real request
+        // that requires a CORS preflight, just like the executeWorkflow function.
+        // The original /system_stats with GET was misleading as it didn't trigger CORS checks.
+        endpoint = new URL('/prompt', apiUrl).toString();
     } catch (e) {
         return { success: false, message: `Invalid URL format: ${apiUrl}` };
     }
 
     try {
-        // A simple GET request to /system_stats is a reliable way to check
-        // for connectivity and CORS issues without needing a valid prompt payload.
+        // Sending a POST request with a JSON content type header forces the browser
+        // to make a CORS preflight (OPTIONS) request. This is what we want to test.
         const response = await fetch(endpoint, { 
-            method: 'GET'
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({}) // An empty body is fine for just testing the connection
         });
 
         if (response.ok) {
+            // This would be a success, e.g., if the server accepts empty prompts.
             const data = await response.json();
-            // A successful response from /system_stats confirms the server is reachable and responsive.
             return { success: true, message: 'Connection to ComfyUI successful!', data };
         } else {
+            // A 400 Bad Request error is also a "success" in terms of connectivity.
+            // It means the CORS preflight passed, the server was reached, and it responded
+            // with a valid HTTP error for our empty request. The key is that we connected.
+            if (response.status === 400) {
+                 return { success: true, message: 'Connection to ComfyUI successful! The server is reachable.' };
+            }
              return { 
                 success: false, 
                 message: `Connection failed. Server responded with HTTP status ${response.status} ${response.statusText}. Please check if the URL is correct and the server is running.` 
@@ -179,11 +205,26 @@ export const testComfyUIConnection = async (apiUrl: string): Promise<{ success: 
 
     } catch (error) {
         if (error instanceof TypeError) {
-            // A TypeError on a fetch request is the most common browser error for CORS or network issues.
+            let message;
+            let isCorsError = false;
+            let isMixedContentError = false;
+            try {
+                const url = new URL(apiUrl);
+                 if (window.location.protocol === 'https:' && url.protocol === 'http:') {
+                    message = `Mixed Content Error: The app is on HTTPS, but the ComfyUI URL is on HTTP. Browsers block these requests.`;
+                    isMixedContentError = true;
+                } else {
+                    message = `Network Error. Could not connect to ${apiUrl}. Please ensure the server is running, the URL is correct, and CORS is enabled by starting ComfyUI with the '--enable-cors' flag.`;
+                    isCorsError = true;
+                }
+            } catch(e) {
+                message = `Invalid URL format: ${apiUrl}`;
+            }
             return { 
                 success: false, 
-                isCorsError: true,
-                message: `Network error. Could not connect to ${apiUrl}. Please ensure the server is running, the URL is correct, and CORS is enabled (try starting ComfyUI with the '--enable-cors' flag).`
+                isCorsError: isCorsError,
+                isMixedContentError: isMixedContentError,
+                message: message
             };
         }
          if (error instanceof SyntaxError) {
@@ -192,7 +233,6 @@ export const testComfyUIConnection = async (apiUrl: string): Promise<{ success: 
                 message: 'Received an invalid response (not JSON). The URL might be pointing to a website instead of the ComfyUI API.'
             };
         }
-        // For other unexpected errors
         return { 
             success: false, 
             message: `An unexpected error occurred: ${(error as Error).message}`

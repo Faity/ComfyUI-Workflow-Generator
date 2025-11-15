@@ -151,7 +151,10 @@ export const translations = {
     settingsTestStatusError: 'Connection failed.',
     settingsCorsDetected: 'CORS Issue Detected',
     settingsCorsExplanation: 'The browser is blocking the connection for security reasons. To fix this, you need to start ComfyUI with an additional launch parameter.',
-    settingsCorsSolutionHtml: 'Add the `<code class="bg-black/50 px-1 py-0.5 rounded text-white">--enable-cors</code>` flag to your startup file (e.g., `run_nvidia_gpu.bat`) and restart ComfyUI.',
+    settingsCorsSolutionHtml: 'Add the `<code class="bg-black/50 px-1 py-0.5 rounded text-white">--enable-cors</code>` flag to your startup file (e.g., `run_nvidia_gpu.bat`) and restart ComfyUI. (Note: The flag is `--enable-cors`, NOT `--cors-enable`).',
+    settingsMixedContentDetected: 'Mixed Content Issue Detected',
+    settingsMixedContentExplanation: 'Your app is running securely via HTTPS, but the ComfyUI URL is insecure (HTTP). Modern browsers block these requests by default for security.',
+    settingsMixedContentSolutionHtml: '<strong>Solution:</strong> To allow the connection for local development, you must change a browser setting <strong>for this site only</strong>. Click the 🔒 icon next to the address bar, go to "Site settings", and change "Insecure content" to "Allow". Then, reload the page.',
 
 
     // DocumentationPanel.tsx
@@ -319,7 +322,10 @@ export const translations = {
     settingsTestStatusError: 'Verbindung fehlgeschlagen.',
     settingsCorsDetected: 'CORS-Problem erkannt',
     settingsCorsExplanation: 'Der Browser blockiert die Verbindung aus Sicherheitsgründen. Um dies zu beheben, müssen Sie ComfyUI mit einem zusätzlichen Startparameter starten.',
-    settingsCorsSolutionHtml: 'Fügen Sie Ihrer Startdatei (z.B. `run_nvidia_gpu.bat`) das Flag `<code class="bg-black/50 px-1 py-0.5 rounded text-white">--enable-cors</code>` hinzu und starten Sie ComfyUI neu.',
+    settingsCorsSolutionHtml: 'Fügen Sie Ihrer Startdatei (z.B. `run_nvidia_gpu.bat`) das Flag `<code class="bg-black/50 px-1 py-0.5 rounded text-white">--enable-cors</code>` hinzu (Achtung: NICHT `--cors-enable`) und starten Sie ComfyUI neu.',
+    settingsMixedContentDetected: 'Mixed-Content-Problem erkannt',
+    settingsMixedContentExplanation: 'Ihre App läuft sicher über HTTPS, aber die ComfyUI-URL ist unsicher (HTTP). Moderne Browser blockieren solche Anfragen standardmäßig aus Sicherheitsgründen.',
+    settingsMixedContentSolutionHtml: '<strong>Lösung:</strong> Um die Verbindung für die lokale Entwicklung zu erlauben, müssen Sie eine Einstellung in Ihrem Browser <strong>nur für diese Webseite</strong> ändern. Klicken Sie auf das 🔒-Symbol neben der Adressleiste, gehen Sie zu den Website-Einstellungen und erlauben Sie "Unsichere Inhalte". Laden Sie dann die Seite neu.',
 
     // DocumentationPanel.tsx
     docLoading: 'Dokumentation wird geladen...',
