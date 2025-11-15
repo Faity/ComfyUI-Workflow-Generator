@@ -12,6 +12,7 @@ Herzlich willkommen zur AI ComfyUI Workflow Suite! Dieses Tool wurde entwickelt,
 7.  [Einstellungen](#einstellungen)
 8.  [Tipps für beste Ergebnisse](#tipps-für-beste-ergebnisse)
 9.  [Qualität & Technische Details](#qualität--technische-details)
+10. [Fehlerbehebung](#fehlerbehebung)
 
 ---
 
@@ -151,3 +152,42 @@ Um die höchste Zuverlässigkeit zu gewährleisten, durchläuft jeder generierte
 Wenn eine **Lokale LLM API URL** in den Einstellungen konfiguriert ist, erweitert die Suite automatisch ihre Fähigkeiten:
 -   **Retrieval-Augmented Generation (RAG):** Vor der Generierung eines Workflows fragt das System Ihre lokale Wissensdatenbank mit Ihrem Prompt ab. Werden relevante Informationen gefunden, werden diese der Haupt-KI als zusätzlicher Kontext zur Verfügung gestellt, was zu genaueren und maßgeschneiderten Workflows führt.
 -   **Dynamisches System-Inventar:** Die Anwendung ruft eine Echtzeit-Liste Ihrer verfügbaren Modelle (Checkpoints, LoRAs usw.) von Ihrem lokalen Server ab. Die KI wird dann angewiesen, **ausschließlich** Modell-Dateinamen aus dieser Liste zu verwenden, was Fehler durch halluzinierte oder nicht verfügbare Modellnamen drastisch reduziert.
+
+---
+
+## Fehlerbehebung
+
+### Verbindungsfehler bei "Run" / WebSocket (für Entwickler)
+
+Wenn Sie diese Anwendung aus dem Quellcode mit dem Vite-Entwicklungsserver (`npm run dev`) ausführen, können bei der Verwendung der "Run"-Funktion oder bei Live-Fortschrittsanzeigen Verbindungsfehler auftreten. Die Ursache ist in der Regel die standardmäßige Content Security Policy (CSP) von Vite, eine Sicherheitsfunktion, die einschränkt, mit welchen Netzwerkadressen sich die Anwendung verbinden darf.
+
+**Symptom:** Die "Run"-Funktion schlägt fehl, und in der Entwicklerkonsole Ihres Browsers wird ein Fehler wie dieser angezeigt:
+`Content Security Policy directive: "connect-src ... 'self'"`
+
+**Lösung:** Sie müssen den Vite-Entwicklungsserver so konfigurieren, dass er Verbindungen zu Ihrem ComfyUI-Server explizit erlaubt.
+
+1.  Erstellen Sie eine Datei mit dem Namen `vite.config.ts` im Hauptverzeichnis des Projekts (im selben Ordner wie `package.json`).
+2.  Fügen Sie den folgenden Inhalt in diese neue Datei ein. **Wichtig:** Wenn Ihr ComfyUI-Server unter einer anderen Adresse läuft, ersetzen Sie `http://192.168.1.73:8188` und `ws://192.168.1.73:8188` durch die korrekte Adresse.
+
+    ```typescript
+    import { defineConfig } from 'vite'
+    import react from '@vitejs/plugin-react'
+
+    // https://vitejs.dev/config/
+    export default defineConfig({
+      plugins: [react()],
+      server: {
+        host: true, // Erlaubt Zugriff aus dem Netzwerk
+        headers: {
+          // Diese Richtlinie erlaubt der App, sich mit sich selbst ('self')
+          // und mit Ihrem ComfyUI-Server über HTTP und WebSocket zu verbinden.
+          'Content-Security-Policy': 
+            "connect-src 'self' http://192.168.1.73:8188 ws://192.168.1.73:8188"
+        }
+      }
+    })
+    ```
+3.  Stoppen Sie den Vite-Entwicklungsserver, falls er läuft (Strg + C im Terminal).
+4.  Starten Sie den Server neu mit `npm run dev`.
+
+Diese Änderung weist Ihren Entwicklungsserver an, die korrekte Sicherheitsrichtlinie an den Browser zu senden, der dann die WebSocket-Verbindung zu ComfyUI zulässt.

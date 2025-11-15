@@ -167,36 +167,32 @@ export const uploadImage = async (imageFile: File, apiUrl: string): Promise<Comf
 export const testComfyUIConnection = async (apiUrl: string): Promise<{ success: boolean; message: string; data?: any; isCorsError?: boolean; isMixedContentError?: boolean; }> => {
     let endpoint: string;
     try {
-        // We now target the /prompt endpoint to accurately simulate a real request
-        // that requires a CORS preflight, just like the executeWorkflow function.
-        // The original /system_stats with GET was misleading as it didn't trigger CORS checks.
-        endpoint = new URL('/prompt', apiUrl).toString();
+        // To accurately test the CORS preflight, we POST to a known GET-only endpoint.
+        // A successful connection will be blocked by CORS if not configured, or will
+        // return a 405 "Method Not Allowed" error if CORS is configured correctly.
+        // This is a reliable way to test the actual browser-server communication.
+        endpoint = new URL('/system_stats', apiUrl).toString();
     } catch (e) {
         return { success: false, message: `Invalid URL format: ${apiUrl}` };
     }
 
     try {
-        // Sending a POST request with a JSON content type header forces the browser
-        // to make a CORS preflight (OPTIONS) request. This is what we want to test.
-        const response = await fetch(endpoint, { 
+        // Sending a POST request forces the browser to make a CORS preflight (OPTIONS) request.
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
             },
-            body: JSON.stringify({}) // An empty body is fine for just testing the connection
+            body: JSON.stringify({}),
         });
 
-        if (response.ok) {
-            // This would be a success, e.g., if the server accepts empty prompts.
-            const data = await response.json();
-            return { success: true, message: 'Connection to ComfyUI successful!', data };
+        // A 405 "Method Not Allowed" is a SUCCESS for this test.
+        // It means the CORS preflight passed, the server was reached, and it correctly
+        // responded that the endpoint doesn't support POST. The connection is valid.
+        if (response.ok || response.status === 405) {
+            return { success: true, message: 'Connection to ComfyUI successful! The server is reachable and CORS is configured correctly.' };
         } else {
-            // A 400 Bad Request error is also a "success" in terms of connectivity.
-            // It means the CORS preflight passed, the server was reached, and it responded
-            // with a valid HTTP error for our empty request. The key is that we connected.
-            if (response.status === 400) {
-                 return { success: true, message: 'Connection to ComfyUI successful! The server is reachable.' };
-            }
+             // Any other error status indicates a problem beyond the expected 405.
              return { 
                 success: false, 
                 message: `Connection failed. Server responded with HTTP status ${response.status} ${response.statusText}. Please check if the URL is correct and the server is running.` 

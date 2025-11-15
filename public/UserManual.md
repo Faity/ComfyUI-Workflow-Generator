@@ -12,6 +12,7 @@ Welcome to the AI ComfyUI Workflow Suite! This tool is designed to make creating
 7.  [Settings](#settings)
 8.  [Tips for Best Results](#tips-for-best-results)
 9.  [Quality & Technical Details](#quality--technical-details)
+10. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -151,3 +152,42 @@ To ensure the highest reliability, every generated or corrected workflow undergo
 When a **Local LLM API URL** is configured in the settings, the suite automatically enhances its capabilities:
 -   **Retrieval-Augmented Generation (RAG):** Before generating a workflow, the system queries your local knowledge base with your prompt. If relevant information is found, it is provided to the main AI as extra context, leading to more accurate and tailored workflows.
 -   **Dynamic System Inventory:** The application fetches a real-time list of your available models (checkpoints, LoRAs, etc.) from your local server. The AI is then instructed to **only** use model filenames from this list, drastically reducing errors caused by hallucinated or unavailable model names.
+
+---
+
+## Troubleshooting
+
+### WebSocket/Run Connection Issues (for Developers)
+
+If you are running this application from the source code using the Vite development server (`npm run dev`), you might encounter connection errors when using the "Run" button or live progress updates. This is typically caused by Vite's default Content Security Policy (CSP), which is a security feature that restricts which network addresses the application can connect to.
+
+**Symptom:** The "Run" button fails, and you see an error in your browser's developer console similar to this:
+`Content Security Policy directive: "connect-src ... 'self'"`
+
+**Solution:** You need to configure the Vite development server to allow connections to your ComfyUI server.
+
+1.  Create a file named `vite.config.ts` in the root directory of the project (the same folder as `package.json`).
+2.  Add the following content to this new file. **Important:** If your ComfyUI server runs on a different address, replace `http://192.168.1.73:8188` and `ws://192.168.1.73:8188` with the correct address.
+
+    ```typescript
+    import { defineConfig } from 'vite'
+    import react from '@vitejs/plugin-react'
+
+    // https://vitejs.dev/config/
+    export default defineConfig({
+      plugins: [react()],
+      server: {
+        host: true, // Allows access from your network
+        headers: {
+          // This policy allows the app to connect to itself ('self') 
+          // and to your ComfyUI server via HTTP and WebSocket.
+          'Content-Security-Policy': 
+            "connect-src 'self' http://192.168.1.73:8188 ws://192.168.1.73:8188"
+        }
+      }
+    })
+    ```
+3.  Stop the Vite development server if it's running (Ctrl + C in the terminal).
+4.  Restart the server with `npm run dev`.
+
+This change tells your development server to send the correct security policy to the browser, which will then permit the WebSocket connection to ComfyUI.
