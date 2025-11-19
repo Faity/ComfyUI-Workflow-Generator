@@ -12,11 +12,11 @@ import Toast from './components/Toast';
 import PromptOptimizerModal from './components/PromptOptimizerModal';
 import WorkflowWizardModal from './components/WorkflowWizardModal';
 import SettingsModal from './components/SettingsModal';
-import ApiKeyModal from './components/ApiKeyModal';
+// ApiKeyModal is no longer needed as we use .env
 import { generateWorkflow, validateAndCorrectWorkflow, debugAndCorrectWorkflow } from './services/geminiService';
 import { executeWorkflow, uploadImage } from './services/comfyuiService';
 import { getServerInventory } from './services/localLlmService';
-import { initializeApiKey, saveApiKey } from './services/apiKeyService';
+import { initializeApiKey } from './services/apiKeyService';
 import type { GeneratedWorkflowResponse, HistoryEntry, ComfyUIWorkflow, SystemInventory } from './types';
 import { useLanguage } from './context/LanguageContext';
 import { useTranslations } from './hooks/useTranslations';
@@ -51,8 +51,7 @@ const App: React.FC = () => {
   const [isOptimizerOpen, setIsOptimizerOpen] = useState(false);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
-
+  
   // State
   const [isApiKeySet, setIsApiKeySet] = useState(false);
   const [inventory, setInventory] = useState<SystemInventory | null>(null);
@@ -66,11 +65,16 @@ const App: React.FC = () => {
   const t = useTranslations();
 
   useEffect(() => {
+    // Initialize key from .env file (VITE_API_KEY)
     const keyIsInitialized = initializeApiKey();
     if (keyIsInitialized) {
       setIsApiKeySet(true);
     } else {
-      setIsApiKeyModalOpen(true);
+      setIsApiKeySet(false);
+      // Show error if key is missing from .env
+      setTimeout(() => {
+          showToast('System Configuration Error: VITE_API_KEY is missing from .env file.', 'error');
+      }, 1000);
     }
   }, []);
 
@@ -112,26 +116,9 @@ const App: React.FC = () => {
     setToasts(prev => [...prev, { id, message, type }]);
   };
 
-  const handleSaveApiKey = (apiKey: string) => {
-    try {
-      saveApiKey(apiKey);
-      const keyIsInitialized = initializeApiKey();
-      if (keyIsInitialized) {
-        setIsApiKeySet(true);
-        setIsApiKeyModalOpen(false);
-        showToast(t.apiKeySetSuccess, 'success');
-      } else {
-        throw new Error("Key was saved but could not be initialized.");
-      }
-    } catch (error) {
-      console.error(error);
-      showToast(t.apiKeySetError, 'error');
-    }
-  };
-
   const ensureApiKey = (): boolean => {
     if (!isApiKeySet) {
-        setIsApiKeyModalOpen(true);
+        showToast('System Configuration Error: VITE_API_KEY is missing from .env file.', 'error');
         return false;
     }
     return true;
@@ -319,7 +306,7 @@ const App: React.FC = () => {
         'context/LanguageContext.tsx',
         'hooks/useTranslations.ts',
         'services/comfyuiService.ts', 'services/geminiService.ts', 'services/localLlmService.ts', 'services/apiKeyService.ts',
-        'components/ApiKeyModal.tsx', 'components/DocumentationPanel.tsx', 'components/HistoryPanel.tsx', 'components/Icons.tsx', 'components/InputPanel.tsx', 'components/Loader.tsx',
+        'components/DocumentationPanel.tsx', 'components/HistoryPanel.tsx', 'components/Icons.tsx', 'components/InputPanel.tsx', 'components/Loader.tsx',
         'components/LocalLlmPanel.tsx', 'components/NodeDetailModal.tsx', 'components/OutputPanel.tsx', 'components/PromptOptimizerModal.tsx',
         'components/SettingsModal.tsx', 'components/TesterPanel.tsx', 'components/Toast.tsx', 'components/WorkflowVisualizer.tsx', 'components/WorkflowWizardModal.tsx',
         'public/Bedienungsanleitung.md', 'public/UserManual.md'
@@ -373,8 +360,7 @@ const App: React.FC = () => {
 
   return (
     <>
-      <ApiKeyModal isOpen={isApiKeyModalOpen} onSave={handleSaveApiKey} />
-      <div className={`text-slate-800 h-screen flex flex-col font-sans p-4 gap-4 ${isApiKeyModalOpen ? 'filter blur-sm pointer-events-none' : ''}`}>
+      <div className="text-slate-800 h-screen flex flex-col font-sans p-4 gap-4">
         <header className="flex-shrink-0 glass-panel rounded-2xl shadow-sm z-10">
           <div className="container mx-auto px-6 py-3 flex justify-between items-center">
             <div className="flex items-center">
