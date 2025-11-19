@@ -11,13 +11,13 @@
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
       
       :root {
-        --background-start: #1a0b36;
-        --background-end: #0f2c3d;
-        --glass-bg: rgba(28, 36, 56, 0.6);
-        --glass-border: rgba(255, 255, 255, 0.1);
-        --accent-glow: 0 0 15px rgba(20, 220, 190, 0.6);
-        --text-primary: #e5e7eb;
-        --text-secondary: #9ca3af;
+        --background-start: #f8fafc;
+        --background-end: #e2e8f0;
+        --glass-bg: rgba(255, 255, 255, 0.85);
+        --glass-border: rgba(255, 255, 255, 0.5);
+        --accent-glow: 0 4px 20px rgba(20, 184, 166, 0.2);
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
       }
 
       body {
@@ -32,8 +32,8 @@
         background-color: var(--glass-bg);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
-        border: 1px solid var(--glass-border);
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 10px 15px -3px rgba(0, 0, 0, 0.05);
       }
 
       .btn-glow {
@@ -46,15 +46,14 @@
         height: 8px;
       }
       ::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 10px;
+        background: transparent;
       }
       ::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.2);
+        background: rgba(148, 163, 184, 0.5);
         border-radius: 10px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: rgba(255, 255, 255, 0.3);
+        background: rgba(100, 116, 139, 0.6);
       }
 
     </style>
@@ -71,7 +70,7 @@
 }
 </script>
 </head>
-  <body class="text-gray-200">
+  <body class="text-slate-800">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

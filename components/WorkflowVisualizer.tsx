@@ -14,16 +14,16 @@ const typeColorMapping: { [key: string]: string } = {
   'VAE': 'stroke-cyan-500',
   'IMAGE': 'stroke-green-500',
   'CLIP': 'stroke-blue-500',
-  '*': 'stroke-gray-400',
+  '*': 'stroke-slate-300',
 };
 
 const getNodeColor = (type: string) => {
-    if (type.includes('Loader')) return 'bg-blue-500/50';
-    if (type.includes('Sampler')) return 'bg-red-500/50';
-    if (type.includes('Encode')) return 'bg-yellow-500/50';
-    if (type.includes('Decode')) return 'bg-cyan-500/50';
-    if (type.includes('Image')) return 'bg-green-500/50';
-    return 'bg-gray-500/50';
+    if (type.includes('Loader')) return 'bg-blue-100 text-blue-800';
+    if (type.includes('Sampler')) return 'bg-red-100 text-red-800';
+    if (type.includes('Encode')) return 'bg-yellow-100 text-yellow-800';
+    if (type.includes('Decode')) return 'bg-cyan-100 text-cyan-800';
+    if (type.includes('Image')) return 'bg-green-100 text-green-800';
+    return 'bg-slate-100 text-slate-800';
 };
 
 
@@ -40,7 +40,7 @@ const WorkflowNode: React.FC<{ node: ComfyUINode; onClick: () => void; }> = ({ n
   return (
     <div
       id={`node-${node.id}`}
-      className="absolute glass-panel rounded-lg shadow-lg text-white text-xs cursor-pointer hover:border-teal-400/80 transition-colors"
+      className="absolute bg-white border border-slate-200 rounded-lg shadow-md text-slate-700 text-xs cursor-pointer hover:border-teal-400 transition-colors"
       style={{
         left: `${node.pos[0]}px`,
         top: `${node.pos[1]}px`,
@@ -49,20 +49,20 @@ const WorkflowNode: React.FC<{ node: ComfyUINode; onClick: () => void; }> = ({ n
       }}
       onClick={onClick}
     >
-      <div className={`p-2 rounded-t-lg font-bold ${getNodeColor(node.type)}`}>
+      <div className={`p-2 rounded-t-lg font-bold border-b border-black/5 ${getNodeColor(node.type)}`}>
         {node.title || node.type}
       </div>
-      <div className="relative p-2">
+      <div className="relative p-2 bg-white rounded-b-lg">
         {Array.isArray(node.inputs) && node.inputs.map((input, index) => (
           <div key={index} className="flex items-center" style={{ height: `${SLOT_HEIGHT}px` }}>
-            <div className="w-2 h-2 rounded-full bg-gray-400 mr-2"></div>
+            <div className="w-2 h-2 rounded-full bg-slate-300 mr-2"></div>
             <span>{input.name}</span>
           </div>
         ))}
         {Array.isArray(node.outputs) && node.outputs.map((output, index) => (
           <div key={index} className="absolute flex items-center right-2" style={{ top: `${NODE_HEADER_HEIGHT + index * SLOT_HEIGHT}px`, height: `${SLOT_HEIGHT}px`}}>
              <span>{output.name}</span>
-            <div className="w-2 h-2 rounded-full bg-gray-400 ml-2"></div>
+            <div className="w-2 h-2 rounded-full bg-slate-300 ml-2"></div>
           </div>
         ))}
       </div>
@@ -101,7 +101,7 @@ const WorkflowVisualizer: React.FC<{ workflow: ComfyUIWorkflow }> = ({ workflow 
             <svg className="absolute top-0 left-0 w-full h-full" style={{ zIndex: 0 }}>
                 <defs>
                   <filter id="glow">
-                    <feGaussianBlur stdDeviation="3.5" result="coloredBlur" />
+                    <feGaussianBlur stdDeviation="2" result="coloredBlur" />
                     <feMerge>
                       <feMergeNode in="coloredBlur" />
                       <feMergeNode in="SourceGraphic" />
@@ -137,7 +137,7 @@ const WorkflowVisualizer: React.FC<{ workflow: ComfyUIWorkflow }> = ({ workflow 
                             d={pathData}
                             className={`${colorClass} fill-none`}
                             strokeWidth="2"
-                            style={{ filter: 'url(#glow)' }}
+                            style={{ filter: 'url(#glow)', opacity: 0.6 }}
                         />
                     );
                 })}

@@ -73,11 +73,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
   const renderTestStatus = (status: TestStatus, message: string) => {
     switch(status) {
         case 'testing':
-            return <div className="w-4 h-4 border-2 border-dashed rounded-full animate-spin border-gray-400"></div>;
+            return <div className="w-4 h-4 border-2 border-dashed rounded-full animate-spin border-slate-400"></div>;
         case 'success':
-            return <CheckCircleIcon className="w-5 h-5 text-green-400" title={message} />;
+            return <CheckCircleIcon className="w-5 h-5 text-green-500" title={message} />;
         case 'error':
-            return <ExclamationCircleIcon className="w-5 h-5 text-red-400" title={message} />;
+            return <ExclamationCircleIcon className="w-5 h-5 text-red-500" title={message} />;
         case 'idle':
         default:
             return null;
@@ -86,7 +86,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -96,11 +96,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
         className="glass-panel rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="flex items-center justify-between p-4 border-b border-[var(--glass-border)]">
-          <h2 id="settings-title" className="text-lg font-bold text-gray-100">{t.settingsTitle}</h2>
+        <header className="flex items-center justify-between p-4 border-b border-slate-200">
+          <h2 id="settings-title" className="text-lg font-bold text-slate-800">{t.settingsTitle}</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white text-2xl font-bold"
+            className="text-slate-400 hover:text-slate-600 text-2xl font-bold"
             aria-label={t.settingsClose}
           >
             &times;
@@ -109,7 +109,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
 
         <div className="p-6 space-y-6">
             <div>
-                <label htmlFor="comfy-url-input" className="block text-sm font-medium text-gray-300 mb-2">{t.settingsComfyUrl}</label>
+                <label htmlFor="comfy-url-input" className="block text-sm font-medium text-slate-600 mb-2">{t.settingsComfyUrl}</label>
                 <div className="flex items-center space-x-2">
                     <input
                         id="comfy-url-input"
@@ -117,15 +117,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
                         value={comfyUIUrl}
                         onChange={(e) => setComfyUIUrl(e.target.value)}
                         placeholder="http://127.0.0.1:8188"
-                        className="w-full p-2 bg-black/20 border border-transparent focus:border-teal-500/50 rounded-lg focus:ring-2 focus:ring-teal-400 transition-all"
+                        className="w-full p-2 bg-white border border-slate-300 focus:border-teal-500 rounded-lg focus:ring-2 focus:ring-teal-200 transition-all"
                     />
                     <div className="w-5 h-5 flex-shrink-0">{renderTestStatus(comfyTestStatus, comfyTestMessage)}</div>
-                    <button onClick={handleTestComfyUI} disabled={comfyTestStatus === 'testing'} className="px-4 py-2 text-sm bg-sky-500/80 text-white rounded-lg hover:bg-sky-500 disabled:opacity-50 transition-colors whitespace-nowrap">
+                    <button onClick={handleTestComfyUI} disabled={comfyTestStatus === 'testing'} className="px-4 py-2 text-sm bg-sky-500 text-white rounded-lg hover:bg-sky-600 disabled:opacity-50 transition-colors whitespace-nowrap shadow-sm">
                         {t.settingsTestConnection}
                     </button>
                 </div>
                 {isMixedContentError && (
-                    <div className="mt-3 p-4 bg-orange-900/40 border border-orange-500/50 rounded-lg text-orange-200 text-sm">
+                    <div className="mt-3 p-4 bg-orange-50 border border-orange-200 rounded-lg text-orange-800 text-sm">
                         <p className="font-bold mb-2">{t.settingsMixedContentDetected}</p>
                         <p className="text-xs mb-2">
                             {t.settingsMixedContentExplanation}
@@ -134,7 +134,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
                     </div>
                 )}
                 {isCorsError && !isMixedContentError && (
-                    <div className="mt-3 p-4 bg-yellow-900/40 border border-yellow-500/50 rounded-lg text-yellow-200 text-sm">
+                    <div className="mt-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm">
                         <p className="font-bold mb-2">{t.settingsCorsDetected}</p>
                         <p className="text-xs">
                             {t.settingsCorsExplanation}
@@ -142,14 +142,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
                         <p className="mt-2 text-xs" dangerouslySetInnerHTML={{ __html: t.settingsCorsSolutionHtml }} />
                     </div>
                 )}
-                {comfyTestStatus === 'error' && !isCorsError && !isMixedContentError && <p className="mt-2 text-xs text-red-300 bg-red-900/30 p-2 rounded-md">{comfyTestMessage}</p>}
-                {comfyTestStatus === 'success' && <p className="mt-2 text-xs text-green-300">{comfyTestMessage}</p>}
-                <p className="mt-2 text-xs text-gray-400">
+                {comfyTestStatus === 'error' && !isCorsError && !isMixedContentError && <p className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded-md">{comfyTestMessage}</p>}
+                {comfyTestStatus === 'success' && <p className="mt-2 text-xs text-green-600">{comfyTestMessage}</p>}
+                <p className="mt-2 text-xs text-slate-500">
                     {t.settingsComfyUrlHelp}
                 </p>
             </div>
              <div>
-                <label htmlFor="local-llm-url-input" className="block text-sm font-medium text-gray-300 mb-2">{t.settingsLocalLlmUrl}</label>
+                <label htmlFor="local-llm-url-input" className="block text-sm font-medium text-slate-600 mb-2">{t.settingsLocalLlmUrl}</label>
                  <div className="flex items-center space-x-2">
                     <input
                         id="local-llm-url-input"
@@ -157,47 +157,47 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
                         value={localLlmApiUrl}
                         onChange={(e) => setLocalLlmApiUrl(e.target.value)}
                         placeholder="http://127.0.0.1:8000"
-                        className="w-full p-2 bg-black/20 border border-transparent focus:border-teal-500/50 rounded-lg focus:ring-2 focus:ring-teal-400 transition-all"
+                        className="w-full p-2 bg-white border border-slate-300 focus:border-teal-500 rounded-lg focus:ring-2 focus:ring-teal-200 transition-all"
                     />
                     <div className="w-5 h-5 flex-shrink-0">{renderTestStatus(llmTestStatus, llmTestMessage)}</div>
-                    <button onClick={handleTestLocalLlm} disabled={llmTestStatus === 'testing'} className="px-4 py-2 text-sm bg-sky-500/80 text-white rounded-lg hover:bg-sky-500 disabled:opacity-50 transition-colors whitespace-nowrap">
+                    <button onClick={handleTestLocalLlm} disabled={llmTestStatus === 'testing'} className="px-4 py-2 text-sm bg-sky-500 text-white rounded-lg hover:bg-sky-600 disabled:opacity-50 transition-colors whitespace-nowrap shadow-sm">
                         {t.settingsTestConnection}
                     </button>
                 </div>
-                {llmTestStatus === 'error' && <p className="mt-2 text-xs text-red-300 bg-red-900/30 p-2 rounded-md">{llmTestMessage}</p>}
-                {llmTestStatus === 'success' && <p className="mt-2 text-xs text-green-300">{llmTestMessage}</p>}
-                <p className="mt-2 text-xs text-gray-400">
+                {llmTestStatus === 'error' && <p className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded-md">{llmTestMessage}</p>}
+                {llmTestStatus === 'success' && <p className="mt-2 text-xs text-green-600">{llmTestMessage}</p>}
+                <p className="mt-2 text-xs text-slate-500">
                     {t.settingsLocalLlmUrlHelp}
                 </p>
             </div>
-             <div className="border-t border-[var(--glass-border)] pt-6 space-y-4">
+             <div className="border-t border-slate-200 pt-6 space-y-4">
                 <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">{t.settingsRagProvider}</label>
-                    <div className="flex space-x-1 bg-black/20 p-1 rounded-full">
+                    <label className="block text-sm font-medium text-slate-600 mb-2">{t.settingsRagProvider}</label>
+                    <div className="flex space-x-1 bg-slate-100 p-1 rounded-full border border-slate-200">
                         <button 
                             onClick={() => setRagProvider('default')}
-                            className={`w-1/2 rounded-full py-1.5 text-sm transition-colors ${ragProvider === 'default' ? 'bg-sky-500/80 text-white shadow-sm' : 'text-gray-300 hover:bg-white/10'}`}
+                            className={`w-1/2 rounded-full py-1.5 text-sm transition-colors ${ragProvider === 'default' ? 'bg-white text-teal-600 shadow-sm' : 'text-slate-500 hover:bg-white/50'}`}
                         >
                             {t.settingsRagProviderDefault}
                         </button>
                         <button 
                             onClick={() => setRagProvider('privateGPT')}
-                            className={`w-1/2 rounded-full py-1.5 text-sm transition-colors ${ragProvider === 'privateGPT' ? 'bg-sky-500/80 text-white shadow-sm' : 'text-gray-300 hover:bg-white/10'}`}
+                            className={`w-1/2 rounded-full py-1.5 text-sm transition-colors ${ragProvider === 'privateGPT' ? 'bg-white text-teal-600 shadow-sm' : 'text-slate-500 hover:bg-white/50'}`}
                         >
                             {t.settingsRagProviderPrivateGpt}
                         </button>
                     </div>
-                    <p className="mt-2 text-xs text-gray-400">{t.settingsRagProviderHelp}</p>
+                    <p className="mt-2 text-xs text-slate-500">{t.settingsRagProviderHelp}</p>
                 </div>
 
                  <div>
-                     <h3 className="text-md font-semibold text-gray-200 mb-1">{t.settingsDownloadSource}</h3>
-                     <p className="mt-1 text-xs text-gray-400 mb-3">
+                     <h3 className="text-md font-semibold text-slate-800 mb-1">{t.settingsDownloadSource}</h3>
+                     <p className="mt-1 text-xs text-slate-500 mb-3">
                         {t.settingsDownloadSourceHelp}
                      </p>
                      <button
                         onClick={onDownloadSourceCode}
-                        className="w-full flex items-center justify-center px-4 py-2 bg-white/10 text-white font-semibold rounded-lg hover:bg-white/20 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-teal-500"
+                        className="w-full flex items-center justify-center px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-50 focus:ring-teal-500 border border-slate-300"
                     >
                         <DownloadIcon className="w-5 h-5 mr-2" />
                         {t.settingsDownloadSource}
@@ -206,11 +206,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
             </div>
         </div>
 
-        <footer className="p-4 border-t border-[var(--glass-border)] bg-black/10 flex justify-between items-center">
-            <span className="text-xs text-gray-500">{t.appVersion} {version}</span>
+        <footer className="p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center">
+            <span className="text-xs text-slate-500">{t.appVersion} {version}</span>
             <button
                 onClick={handleSave}
-                className="px-5 py-2 bg-teal-500/90 text-white font-semibold rounded-lg hover:bg-teal-500 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-teal-500"
+                className="px-5 py-2 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-500 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-50 focus:ring-teal-500 shadow-md"
             >
                 {t.settingsSave}
             </button>

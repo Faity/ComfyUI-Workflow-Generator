@@ -21,44 +21,44 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onSave }) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-background-end/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-      <div className="glass-panel rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border-teal-500/50 border-2">
-        <header className="p-6">
-          <h2 id="api-key-title" className="text-2xl font-bold text-gray-100">{t.apiKeyModalTitle}</h2>
+    <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+      <div className="glass-panel rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border-teal-500 border-2">
+        <header className="p-6 bg-white">
+          <h2 id="api-key-title" className="text-2xl font-bold text-slate-800">{t.apiKeyModalTitle}</h2>
         </header>
 
-        <div className="p-6 space-y-4">
-          <p className="text-sm text-gray-400">{t.apiKeyModalSubtext}</p>
+        <div className="p-6 space-y-4 bg-white">
+          <p className="text-sm text-slate-600">{t.apiKeyModalSubtext}</p>
           <div>
-            <label htmlFor="api-key-input" className="block text-sm font-medium text-gray-300 mb-2">{t.apiKeyModalInputLabel}</label>
+            <label htmlFor="api-key-input" className="block text-sm font-medium text-slate-700 mb-2">{t.apiKeyModalInputLabel}</label>
             <input
               id="api-key-input"
               type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="AIzaSy..."
-              className="w-full p-3 bg-black/20 border border-transparent focus:border-teal-500/50 rounded-lg focus:ring-2 focus:ring-teal-400 transition-all"
+              className="w-full p-3 bg-slate-50 border border-slate-300 focus:border-teal-500 rounded-lg focus:ring-2 focus:ring-teal-200 transition-all"
               autoFocus
             />
           </div>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-slate-500">
             {t.apiKeyModalWhereToFind}{' '}
             <a
               href="https://aistudio.google.com/app/apikey"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sky-400 hover:underline"
+              className="text-sky-600 hover:underline"
             >
               Google AI Studio
             </a>.
           </p>
         </div>
 
-        <footer className="p-6 bg-black/10 flex justify-end">
+        <footer className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end">
           <button
             onClick={handleSave}
             disabled={!apiKey.trim()}
-            className="px-6 py-3 bg-teal-500/90 text-white font-semibold rounded-lg hover:bg-teal-500 disabled:bg-gray-600/50 disabled:cursor-not-allowed transition-colors"
+            className="px-6 py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-500 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors shadow-md"
           >
             {t.apiKeyModalSaveButton}
           </button>

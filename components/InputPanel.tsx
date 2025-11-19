@@ -50,12 +50,12 @@ const InputPanel: React.FC<InputPanelProps> = ({ prompt, setPrompt, onGenerate, 
   return (
     <div className="w-full lg:w-1/2 glass-panel rounded-2xl p-6 flex flex-col space-y-4 transition-all duration-300 overflow-y-auto">
       <div className="flex-shrink-0 flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-100">{t.describeWorkflow}</h2>
+        <h2 className="text-2xl font-bold text-slate-800">{t.describeWorkflow}</h2>
         <div className="flex items-center space-x-2">
             <button 
                 onClick={onOpenOptimizer}
                 disabled={isLoading}
-                className="flex items-center px-4 py-2 text-sm bg-sky-500/80 backdrop-blur-sm border border-sky-400/50 text-white rounded-full hover:bg-sky-500 disabled:opacity-50 transition-all duration-300 transform hover:scale-105"
+                className="flex items-center px-4 py-2 text-sm bg-sky-500 text-white rounded-full hover:bg-sky-600 disabled:opacity-50 transition-all duration-300 transform hover:scale-105 shadow-sm"
                 title={t.promptAssistantTitle}
             >
                 <SparklesIcon className="w-4 h-4 mr-2" />
@@ -64,7 +64,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ prompt, setPrompt, onGenerate, 
             <button 
                 onClick={onOpenWizard}
                 disabled={isLoading}
-                className="flex items-center px-4 py-2 text-sm bg-indigo-500/80 backdrop-blur-sm border border-indigo-400/50 text-white rounded-full hover:bg-indigo-500 disabled:opacity-50 transition-all duration-300 transform hover:scale-105"
+                className="flex items-center px-4 py-2 text-sm bg-indigo-500 text-white rounded-full hover:bg-indigo-600 disabled:opacity-50 transition-all duration-300 transform hover:scale-105 shadow-sm"
                 title={t.workflowWizardTitle}
             >
                 <CpuChipIcon className="w-4 h-4 mr-2" />
@@ -72,48 +72,48 @@ const InputPanel: React.FC<InputPanelProps> = ({ prompt, setPrompt, onGenerate, 
             </button>
         </div>
       </div>
-      <p className="flex-shrink-0 text-sm text-gray-400">
+      <p className="flex-shrink-0 text-sm text-slate-500">
         {t.describeWorkflowSubtext}
       </p>
       <textarea
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         placeholder={t.promptPlaceholder}
-        className="w-full flex-shrink-0 h-40 p-4 bg-black/20 rounded-xl resize-y focus:ring-2 focus:ring-teal-400 focus:bg-black/30 border border-transparent focus:border-teal-500/50 transition-all duration-300 text-gray-200 placeholder-gray-500"
+        className="w-full flex-shrink-0 h-40 p-4 bg-white border border-slate-200 rounded-xl resize-y focus:ring-2 focus:ring-teal-400 focus:border-transparent transition-all duration-300 text-slate-700 placeholder-slate-400 shadow-sm"
         disabled={isLoading}
       />
 
       <div className="flex-shrink-0 space-y-2">
-        <h3 className="text-sm font-semibold text-gray-400">{t.inputPanelImageUpload}</h3>
-        <p className="text-xs text-gray-500 -mt-1">{t.inputPanelImageUploadSubtext}</p>
+        <h3 className="text-sm font-semibold text-slate-500">{t.inputPanelImageUpload}</h3>
+        <p className="text-xs text-slate-400 -mt-1">{t.inputPanelImageUploadSubtext}</p>
         {imagePreview ? (
-            <div className="relative w-full aspect-video bg-black/30 rounded-lg overflow-hidden">
+            <div className="relative w-full aspect-video bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
                 <img src={imagePreview} alt="Preview" className="w-full h-full object-contain" />
                 <button 
                     onClick={() => setUploadedImage(null)} 
-                    className="absolute top-2 right-2 p-1.5 bg-red-600/80 rounded-full hover:bg-red-500 transition-colors"
+                    className="absolute top-2 right-2 p-1.5 bg-white rounded-full hover:bg-red-50 text-red-500 shadow-md transition-colors"
                     title="Remove Image"
                 >
-                    <TrashIcon className="w-4 h-4 text-white" />
+                    <TrashIcon className="w-4 h-4" />
                 </button>
             </div>
         ) : (
-            <div {...getRootProps()} className={`p-6 border-2 border-dashed rounded-xl text-center cursor-pointer transition-all duration-300 ${isDragActive ? 'border-teal-400 bg-teal-500/20' : 'border-gray-600/50 hover:border-gray-500 bg-black/20'}`}>
+            <div {...getRootProps()} className={`p-6 border-2 border-dashed rounded-xl text-center cursor-pointer transition-all duration-300 ${isDragActive ? 'border-teal-400 bg-teal-50' : 'border-slate-300 hover:border-slate-400 bg-white'}`}>
                 <input {...getInputProps()} />
-                <p className="text-gray-400 text-sm">{t.inputPanelDropzone}</p>
+                <p className="text-slate-500 text-sm">{t.inputPanelDropzone}</p>
             </div>
         )}
       </div>
       
       <div className="flex-shrink-0 space-y-3">
-        <h3 className="text-sm font-semibold text-gray-400">{t.tryExample}</h3>
+        <h3 className="text-sm font-semibold text-slate-500">{t.tryExample}</h3>
         <div className="flex flex-wrap gap-2">
           {examplePrompts.map((p, i) => (
             <button
               key={i}
               onClick={() => setPrompt(p)}
               disabled={isLoading}
-              className="px-3 py-1.5 text-xs bg-white/10 text-gray-300 rounded-full hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-3 py-1.5 text-xs bg-slate-100 text-slate-600 border border-slate-200 rounded-full hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {p}
             </button>
@@ -124,7 +124,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ prompt, setPrompt, onGenerate, 
       <button
         onClick={onGenerate}
         disabled={isLoading || !prompt.trim()}
-        className={`w-full mt-auto flex-shrink-0 flex items-center justify-center px-6 py-4 bg-teal-500/90 text-white font-bold rounded-xl shadow-lg hover:bg-teal-500 disabled:bg-gray-600/50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-300 ${!isLoading && prompt.trim() ? 'btn-glow' : ''}`}
+        className={`w-full mt-auto flex-shrink-0 flex items-center justify-center px-6 py-4 bg-teal-600 text-white font-bold rounded-xl shadow-md hover:bg-teal-500 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed transform hover:scale-[1.02] transition-all duration-300 ${!isLoading && prompt.trim() ? 'btn-glow' : ''}`}
       >
         {isLoading ? (
           <div className="w-6 h-6 border-2 border-dashed rounded-full animate-spin border-white"></div>
