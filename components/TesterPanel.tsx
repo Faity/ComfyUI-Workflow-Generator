@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { WrenchIcon, UploadIcon } from './Icons';
 import { useTranslations } from '../hooks/useTranslations';
@@ -12,7 +12,13 @@ const TesterPanel: React.FC<TesterPanelProps> = ({ onValidate, isLoading }) => {
   const [workflowJson, setWorkflowJson] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [jsonError, setJsonError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const t = useTranslations();
+
+  const processFileContent = (content: string) => {
+      setWorkflowJson(content);
+      setJsonError(null); // Clear potential previous errors
+  };
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -21,8 +27,7 @@ const TesterPanel: React.FC<TesterPanelProps> = ({ onValidate, isLoading }) => {
       reader.onload = (e) => {
         const content = e.target?.result;
         if (typeof content === 'string') {
-          setWorkflowJson(content);
-          setJsonError(null); // Clear potential previous errors
+          processFileContent(content);
         }
       };
       reader.readAsText(file);
@@ -35,6 +40,21 @@ const TesterPanel: React.FC<TesterPanelProps> = ({ onValidate, isLoading }) => {
     multiple: false,
     disabled: isLoading
   });
+
+  const handleJsonFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result;
+      if (typeof content === 'string') {
+          processFileContent(content);
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = ''; // Reset
+  };
 
   const handleValidateClick = () => {
     setJsonError(null);
@@ -52,11 +72,29 @@ const TesterPanel: React.FC<TesterPanelProps> = ({ onValidate, isLoading }) => {
 
   return (
     <div className="w-full lg:w-1/2 glass-panel rounded-2xl p-8 flex flex-col space-y-6" role="tabpanel">
-      <div>
-        <h2 className="text-2xl font-bold text-slate-800">{t.testerTitle}</h2>
-        <p className="text-sm text-slate-500 mt-1">
-          {t.testerSubtext}
-        </p>
+      <div className="flex justify-between items-start">
+        <div>
+            <h2 className="text-2xl font-bold text-slate-800">{t.testerTitle}</h2>
+            <p className="text-sm text-slate-500 mt-1">
+            {t.testerSubtext}
+            </p>
+        </div>
+        <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleJsonFileChange} 
+            accept=".json" 
+            className="hidden" 
+        />
+        <button 
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading}
+            className="flex-shrink-0 ml-4 flex items-center px-3 py-2 text-sm bg-slate-100 text-slate-600 border border-slate-200 rounded-full hover:bg-slate-200 disabled:opacity-50 transition-all duration-300 shadow-sm"
+            title={t.testerUploadLabel}
+        >
+            <UploadIcon className="w-4 h-4 mr-2" />
+            {t.inputPanelImportJson}
+        </button>
       </div>
 
       <div>
