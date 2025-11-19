@@ -256,6 +256,61 @@ Example of the final JSON output structure:
 `;
 
 
+/**
+ * Waits for a specified amount of time.
+ * @param ms Time to wait in milliseconds.
+ */
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Executes an API operation with automatic retry logic for transient errors (like 503 Service Unavailable).
+ * Implements exponential backoff.
+ * 
+ * @param operation The async operation to retry.
+ * @param retries Maximum number of retry attempts (default: 3).
+ * @param backoff Initial delay in milliseconds (default: 1000).
+ */
+async function callWithRetry<T>(
+    operation: () => Promise<T>, 
+    retries: number = 3, 
+    backoff: number = 1000
+): Promise<T> {
+    for (let i = 0; i < retries; i++) {
+        try {
+            return await operation();
+        } catch (error: any) {
+            // Determine if the error is a transient server error (500, 502, 503, 504) or a network fetch error.
+            // Google GenAI SDK errors might not always have a clean 'status' property, so we check message content too.
+            const isRetryable = 
+                error.status === 503 || 
+                error.status === 502 || 
+                error.status === 504 || 
+                error.status === 500 ||
+                (error.message && (
+                    error.message.includes('fetch failed') || 
+                    error.message.includes('overloaded') ||
+                    error.message.includes('Service Unavailable') ||
+                    error.message.includes('Internal Server Error')
+                ));
+
+            if (isRetryable && i < retries - 1) {
+                // Add a little jitter to the backoff to prevent thundering herd
+                const jitter = Math.random() * 500;
+                const waitTime = backoff * Math.pow(2, i) + jitter;
+                
+                console.warn(`Gemini API Transient Error (${error.status || error.message}). Retrying in ${Math.round(waitTime)}ms... (Attempt ${i + 1}/${retries})`);
+                await wait(waitTime);
+                continue;
+            }
+            
+            // If not retryable or max retries reached, re-throw
+            throw error;
+        }
+    }
+    throw new Error("Max retries exceeded");
+}
+
+
 export const generateWorkflow = async (description: string, localLlmApiUrl: string, inventory: SystemInventory | null, imageName?: string, ragProvider: RagProvider = 'default'): Promise<Omit<GeneratedWorkflowResponse, 'validationLog'>> => {
   if (!process.env.API_KEY) {
     throw new Error("API key is missing. Please set the API_KEY environment variable.");
@@ -310,13 +365,15 @@ ${JSON.stringify(inventory, null, 2)}
 
   let rawResponseText = '';
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: description,
-      config: {
-        systemInstruction: finalSystemInstruction,
-        responseMimeType: "application/json",
-      }
+    const response = await callWithRetry(async () => {
+        return await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: description,
+            config: {
+                systemInstruction: finalSystemInstruction,
+                responseMimeType: "application/json",
+            }
+        });
     });
 
     rawResponseText = response.text.trim();
@@ -378,13 +435,15 @@ export const validateAndCorrectWorkflow = async (workflow: ComfyUIWorkflow): Pro
     let rawResponseText = '';
 
     try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: `Please validate and correct the following ComfyUI workflow:\n\n${workflowString}`,
-            config: {
-                systemInstruction: SYSTEM_INSTRUCTION_VALIDATOR,
-                responseMimeType: "application/json",
-            }
+        const response = await callWithRetry(async () => {
+            return await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: `Please validate and correct the following ComfyUI workflow:\n\n${workflowString}`,
+                config: {
+                    systemInstruction: SYSTEM_INSTRUCTION_VALIDATOR,
+                    responseMimeType: "application/json",
+                }
+            });
         });
         
         rawResponseText = response.text.trim();
@@ -434,13 +493,15 @@ export const debugAndCorrectWorkflow = async (workflow: ComfyUIWorkflow, errorMe
     let rawResponseText = '';
 
     try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: payloadString,
-            config: {
-                systemInstruction: SYSTEM_INSTRUCTION_DEBUGGER,
-                responseMimeType: "application/json",
-            }
+        const response = await callWithRetry(async () => {
+            return await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: payloadString,
+                config: {
+                    systemInstruction: SYSTEM_INSTRUCTION_DEBUGGER,
+                    responseMimeType: "application/json",
+                }
+            });
         });
         
         rawResponseText = response.text.trim();
