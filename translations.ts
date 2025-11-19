@@ -77,6 +77,8 @@ export const translations = {
     // TesterPanel.tsx
     testerTitle: 'Validate & Correct Workflow',
     testerSubtext: 'Paste your workflow to check it. Optionally, provide an error message for a targeted fix.',
+    testerUploadLabel: 'Upload Workflow (.json)',
+    testerDropzone: 'Drag & drop a JSON file here, or click to select.',
     testerWorkflowJsonLabel: 'Workflow JSON',
     testerWorkflowJsonPlaceholder: 'Paste your workflow JSON here...',
     testerErrorJsonEmpty: 'Workflow text field cannot be empty.',
@@ -248,6 +250,8 @@ export const translations = {
     // TesterPanel.tsx
     testerTitle: 'Workflow validieren & korrigieren',
     testerSubtext: 'Fügen Sie Ihren Workflow ein, um ihn zu überprüfen. Geben Sie optional eine Fehlermeldung an, um eine gezielte Korrektur zu erhalten.',
+    testerUploadLabel: 'Workflow hochladen (.json)',
+    testerDropzone: 'Ziehen Sie eine JSON-Datei hierher oder klicken Sie zum Auswählen.',
     testerWorkflowJsonLabel: 'Workflow JSON',
     testerWorkflowJsonPlaceholder: 'Fügen Sie hier Ihr Workflow-JSON ein...',
     testerErrorJsonEmpty: 'Workflow-Textfeld darf nicht leer sein.',
@@ -312,7 +316,7 @@ export const translations = {
     settingsRagProvider: 'RAG-Anbieter',
     settingsRagProviderHelp: 'Wählen Sie das API-Format für Ihren lokalen RAG-Dienst.',
     settingsRagProviderDefault: 'Standard',
-    settingsRagProviderPrivateGpt: 'privateGPT',
+    settingsRagProviderPrivateGpt: 'Standard',
     settingsSave: 'Speichern & Schließen',
     settingsDownloadSource: 'Quellcode herunterladen',
     settingsDownloadSourceHelp: 'Laden Sie alle Quelldateien dieser Anwendung gebündelt in einer einzigen .txt-Datei herunter.',

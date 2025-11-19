@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { WrenchIcon } from './Icons';
+import React, { useState, useCallback } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { WrenchIcon, UploadIcon } from './Icons';
 import { useTranslations } from '../hooks/useTranslations';
 
 interface TesterPanelProps {
@@ -12,6 +13,28 @@ const TesterPanel: React.FC<TesterPanelProps> = ({ onValidate, isLoading }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const [jsonError, setJsonError] = useState<string | null>(null);
   const t = useTranslations();
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result;
+        if (typeof content === 'string') {
+          setWorkflowJson(content);
+          setJsonError(null); // Clear potential previous errors
+        }
+      };
+      reader.readAsText(file);
+    }
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { 'application/json': ['.json'] },
+    multiple: false,
+    disabled: isLoading
+  });
 
   const handleValidateClick = () => {
     setJsonError(null);
@@ -37,6 +60,15 @@ const TesterPanel: React.FC<TesterPanelProps> = ({ onValidate, isLoading }) => {
       </div>
 
       <div>
+        <label className="block text-sm font-medium text-slate-600 mb-2">{t.testerUploadLabel}</label>
+        <div {...getRootProps()} className={`p-6 border-2 border-dashed rounded-xl text-center cursor-pointer transition-all duration-300 mb-4 ${isDragActive ? 'border-teal-400 bg-teal-50' : 'border-slate-300 hover:border-slate-400 bg-white'} ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+            <input {...getInputProps()} />
+            <div className="flex flex-col items-center justify-center text-slate-500">
+                <UploadIcon className="w-8 h-8 mb-2 text-slate-400" />
+                <p className="text-sm">{t.testerDropzone}</p>
+            </div>
+        </div>
+
         <label htmlFor="workflow-json-input" className="block text-sm font-medium text-slate-600 mb-2">{t.testerWorkflowJsonLabel}</label>
         <textarea
             id="workflow-json-input"
@@ -46,7 +78,7 @@ const TesterPanel: React.FC<TesterPanelProps> = ({ onValidate, isLoading }) => {
                 if (jsonError) setJsonError(null);
             }}
             placeholder={t.testerWorkflowJsonPlaceholder}
-            className={`w-full h-80 p-4 bg-white border rounded-xl resize-y focus:ring-2 transition-all duration-300 text-slate-700 placeholder-slate-400 shadow-sm ${jsonError ? 'border-red-300 focus:ring-red-400' : 'border-slate-200 focus:border-transparent focus:ring-teal-400'}`}
+            className={`w-full h-60 p-4 bg-white border rounded-xl resize-y focus:ring-2 transition-all duration-300 text-slate-700 placeholder-slate-400 shadow-sm ${jsonError ? 'border-red-300 focus:ring-red-400' : 'border-slate-200 focus:border-transparent focus:ring-teal-400'}`}
             disabled={isLoading}
             aria-label="Workflow JSON Input"
             aria-invalid={!!jsonError}
