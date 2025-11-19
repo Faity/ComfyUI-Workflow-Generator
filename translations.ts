@@ -36,6 +36,8 @@ export const translations = {
     toastSendingWorkflow: 'Sending workflow to ComfyUI...',
     toastWorkflowExecutionComplete: 'Workflow execution complete!',
     toastWorkflowExecutionFailed: (error: string) => `Workflow execution failed: ${error}`,
+    toastJsonImported: 'Workflow JSON imported successfully!',
+    toastJsonImportFailed: 'Failed to import JSON. Invalid format.',
 
     // InputPanel.tsx
     describeWorkflow: 'Describe Your Workflow',
@@ -43,6 +45,8 @@ export const translations = {
     promptAssistantTitle: 'Start the AI assistant to improve your prompt',
     workflowWizard: 'Workflow Wizard',
     workflowWizardTitle: 'Start the wizard to build a technical prompt',
+    inputPanelImportJson: 'Import JSON',
+    inputPanelImportJsonTitle: 'Import an existing workflow JSON file',
     describeWorkflowSubtext: 'Specify what you want to achieve. The more detailed your description, the better the generated workflow will be.',
     promptPlaceholder: 'e.g., Create a photorealistic image of a cat in space using an SDXL model...',
     tryExample: 'Or try an example:',
@@ -209,6 +213,8 @@ export const translations = {
     toastSendingWorkflow: 'Sende Workflow an ComfyUI...',
     toastWorkflowExecutionComplete: 'Workflow-Ausführung abgeschlossen!',
     toastWorkflowExecutionFailed: (error: string) => `Workflow-Ausführung fehlgeschlagen: ${error}`,
+    toastJsonImported: 'Workflow JSON erfolgreich importiert!',
+    toastJsonImportFailed: 'JSON-Import fehlgeschlagen. Ungültiges Format.',
     
     // InputPanel.tsx
     describeWorkflow: 'Beschreiben Sie Ihren Workflow',
@@ -216,6 +222,8 @@ export const translations = {
     promptAssistantTitle: 'Starten Sie den KI-Assistenten, um Ihren Prompt zu verbessern',
     workflowWizard: 'Workflow-Assistent',
     workflowWizardTitle: 'Starten Sie den Assistenten, um einen technischen Prompt zu erstellen',
+    inputPanelImportJson: 'JSON Importieren',
+    inputPanelImportJsonTitle: 'Importieren Sie eine existierende Workflow JSON Datei',
     describeWorkflowSubtext: 'Geben Sie an, was Sie erreichen möchten. Je detaillierter Ihre Beschreibung, desto besser wird der generierte Workflow sein.',
     promptPlaceholder: 'z.B. Erstelle ein fotorealistisches Bild einer Katze im Weltraum mit einem SDXL-Modell...',
     tryExample: 'Oder probieren Sie ein Beispiel:',

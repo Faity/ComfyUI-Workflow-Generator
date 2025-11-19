@@ -177,6 +177,24 @@ const App: React.FC = () => {
       setLoadingState({ active: false, message: '', progress: 0 });
     }
   };
+  
+  const handleWorkflowImport = (workflow: ComfyUIWorkflow) => {
+      if (!workflow || !workflow.nodes || !workflow.links) {
+          showToast(t.toastJsonImportFailed, 'error');
+          return;
+      }
+      
+      const importData: GeneratedWorkflowResponse = {
+          workflow: workflow,
+          requirements: { custom_nodes: [], models: [] }, // We don't know requirements for imported workflows
+          validationLog: [],
+          correctionLog: []
+      };
+      
+      setGeneratedData(importData);
+      setSelectedHistoryId(null);
+      showToast(t.toastJsonImported, 'success');
+  };
 
   const handleValidation = async (workflowJson: string, errorMessage: string) => {
     if (!ensureApiKey()) return;
@@ -344,7 +362,17 @@ const App: React.FC = () => {
   const renderMainView = () => {
     switch(mainView) {
       case 'generator':
-        return <InputPanel prompt={prompt} setPrompt={setPrompt} onGenerate={handleGenerate} isLoading={loadingState.active} onOpenOptimizer={() => { if(ensureApiKey()) setIsOptimizerOpen(true); }} onOpenWizard={() => { if(ensureApiKey()) setIsWizardOpen(true); }} uploadedImage={uploadedImage} setUploadedImage={setUploadedImage} />;
+        return <InputPanel 
+            prompt={prompt} 
+            setPrompt={setPrompt} 
+            onGenerate={handleGenerate} 
+            isLoading={loadingState.active} 
+            onOpenOptimizer={() => { if(ensureApiKey()) setIsOptimizerOpen(true); }} 
+            onOpenWizard={() => { if(ensureApiKey()) setIsWizardOpen(true); }} 
+            onWorkflowImport={handleWorkflowImport}
+            uploadedImage={uploadedImage} 
+            setUploadedImage={setUploadedImage} 
+        />;
       case 'tester':
         return <TesterPanel onValidate={handleValidation} isLoading={loadingState.active} />;
       case 'history':

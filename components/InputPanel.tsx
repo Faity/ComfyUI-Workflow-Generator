@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { SparklesIcon, CpuChipIcon, TrashIcon } from './Icons';
+import { SparklesIcon, CpuChipIcon, TrashIcon, UploadIcon } from './Icons';
 import { useTranslations } from '../hooks/useTranslations';
+import type { ComfyUIWorkflow } from '../types';
 
 interface InputPanelProps {
   prompt: string;
@@ -10,6 +11,7 @@ interface InputPanelProps {
   isLoading: boolean;
   onOpenOptimizer: () => void;
   onOpenWizard: () => void;
+  onWorkflowImport: (workflow: ComfyUIWorkflow) => void;
   uploadedImage: File | null;
   setUploadedImage: (file: File | null) => void;
 }
@@ -21,9 +23,10 @@ const examplePrompts = [
     "Workflow für ein SD 1.5 Modell mit ControlNet für Canny Edges.",
 ];
 
-const InputPanel: React.FC<InputPanelProps> = ({ prompt, setPrompt, onGenerate, isLoading, onOpenOptimizer, onOpenWizard, uploadedImage, setUploadedImage }) => {
+const InputPanel: React.FC<InputPanelProps> = ({ prompt, setPrompt, onGenerate, isLoading, onOpenOptimizer, onOpenWizard, onWorkflowImport, uploadedImage, setUploadedImage }) => {
   const t = useTranslations();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (uploadedImage) {
@@ -46,12 +49,52 @@ const InputPanel: React.FC<InputPanelProps> = ({ prompt, setPrompt, onGenerate, 
     accept: { 'image/*': ['.png', '.jpeg', '.jpg', '.webp'] },
     multiple: false
   });
+
+  const handleJsonFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target?.result as string);
+        // Basic validation to check if it looks like a workflow
+        if (json.nodes && json.links) {
+          onWorkflowImport(json as ComfyUIWorkflow);
+        } else {
+           // Even if strictly not valid, try importing, App.tsx might handle better or we assume user knows
+           onWorkflowImport(json as ComfyUIWorkflow);
+        }
+      } catch (error) {
+        console.error("Failed to parse JSON", error);
+      }
+    };
+    reader.readAsText(file);
+    // Reset value to allow re-uploading same file
+    event.target.value = '';
+  };
   
   return (
     <div className="w-full lg:w-1/2 glass-panel rounded-2xl p-6 flex flex-col space-y-4 transition-all duration-300 overflow-y-auto">
-      <div className="flex-shrink-0 flex justify-between items-center">
+      <div className="flex-shrink-0 flex justify-between items-center flex-wrap gap-2">
         <h2 className="text-2xl font-bold text-slate-800">{t.describeWorkflow}</h2>
         <div className="flex items-center space-x-2">
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleJsonFileChange} 
+                accept=".json" 
+                className="hidden" 
+            />
+            <button 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isLoading}
+                className="flex items-center px-3 py-2 text-sm bg-slate-100 text-slate-600 border border-slate-200 rounded-full hover:bg-slate-200 disabled:opacity-50 transition-all duration-300 shadow-sm"
+                title={t.inputPanelImportJsonTitle}
+            >
+                <UploadIcon className="w-4 h-4 mr-2" />
+                {t.inputPanelImportJson}
+            </button>
             <button 
                 onClick={onOpenOptimizer}
                 disabled={isLoading}
