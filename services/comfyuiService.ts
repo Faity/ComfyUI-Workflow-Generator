@@ -38,13 +38,40 @@ export const executeWorkflow = async (
   onError: (error: Error) => void
 ): Promise<void> => {
     const clientId = uuidv4();
+    let promptId: string;
+
+    // --- STEP 1: CONVERSION (Graph -> API) ---
+    // We attempt to convert the workflow to the API format required by the /prompt endpoint.
+    // This endpoint (/workflow/convert) is often added by custom nodes (e.g., Mixlab) or specific backend logic.
+    // If this fails, we fall back to the original workflow, assuming it might already be in correct format.
+    let apiWorkflow = workflow; 
+    
+    try {
+        onProgress({ message: 'Converting workflow to API format...', progress: 1 });
+        
+        const convertEndpoint = new URL('/workflow/convert', apiUrl).toString();
+        const convertResponse = await fetch(convertEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(workflow),
+        });
+
+        if (convertResponse.ok) {
+            apiWorkflow = await convertResponse.json();
+            console.debug("Workflow successfully converted to API format.");
+        } else {
+            console.warn("Conversion endpoint did not return OK. Using original workflow.");
+        }
+    } catch (e) {
+        console.warn("Could not reach conversion endpoint (this is normal if no custom extensions are installed). Proceeding with original workflow.", e);
+    }
+    
+    // --- STEP 2: EXECUTION (POST to /prompt) ---
     const payload = {
-        prompt: workflow,
+        prompt: apiWorkflow,
         client_id: clientId,
     };
     
-    let promptId: string;
-
     // 1. Send the prompt via HTTP POST to get a prompt_id
     try {
         const endpoint = new URL('/prompt', apiUrl).toString();
