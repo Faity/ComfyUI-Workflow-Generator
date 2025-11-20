@@ -195,32 +195,24 @@ export const uploadImage = async (imageFile: File, apiUrl: string): Promise<Comf
 export const testComfyUIConnection = async (apiUrl: string): Promise<{ success: boolean; message: string; data?: any; isCorsError?: boolean; isMixedContentError?: boolean; }> => {
     let endpoint: string;
     try {
-        // To accurately test the CORS preflight, we POST to a known GET-only endpoint.
-        // A successful connection will be blocked by CORS if not configured, or will
-        // return a 405 "Method Not Allowed" error if CORS is configured correctly.
-        // This is a reliable way to test the actual browser-server communication.
+        // Use GET for system_stats. This is a standard endpoint to check if ComfyUI is alive.
+        // If CORS is NOT enabled, the browser will block the read of the response, causing a TypeError.
+        // This is sufficient to detect CORS issues without triggering potential 405 Method Not Allowed errors
+        // that might occur if we tried to POST to a GET-only endpoint (which might not return CORS headers in the 405 response).
         endpoint = new URL('/system_stats', apiUrl).toString();
     } catch (e) {
         return { success: false, message: `Invalid URL format: ${apiUrl}` };
     }
 
     try {
-        // Sending a POST request forces the browser to make a CORS preflight (OPTIONS) request.
         const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({}),
+            method: 'GET',
+            cache: 'no-store', // Ensure we don't get a cached response
         });
 
-        // A 405 "Method Not Allowed" is a SUCCESS for this test.
-        // It means the CORS preflight passed, the server was reached, and it correctly
-        // responded that the endpoint doesn't support POST. The connection is valid.
-        if (response.ok || response.status === 405) {
-            return { success: true, message: 'Connection to ComfyUI successful! The server is reachable and CORS is configured correctly.' };
+        if (response.ok) {
+            return { success: true, message: 'Connection to ComfyUI successful! The server is reachable.' };
         } else {
-             // Any other error status indicates a problem beyond the expected 405.
              return { 
                 success: false, 
                 message: `Connection failed. Server responded with HTTP status ${response.status} ${response.statusText}. Please check if the URL is correct and the server is running.` 
