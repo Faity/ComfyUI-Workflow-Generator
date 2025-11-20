@@ -39,6 +39,16 @@ export const translations = {
     toastJsonImported: 'Workflow JSON imported successfully!',
     toastJsonImportFailed: 'Failed to import JSON. Invalid format.',
 
+    // Execution Logs
+    logStarting: 'Starting execution...',
+    logSending: 'Sending workflow to ComfyUI API...',
+    logError: 'ComfyUI Error:',
+    logAutoFixStarting: 'Auto-Fix initiated. AI is analyzing the error...',
+    logAutoFixApplied: 'AI Fix applied:',
+    logRetrying: 'Retrying execution with corrected workflow...',
+    logSuccess: 'Workflow executed successfully!',
+    logMaxRetries: 'Max retries reached. Execution failed.',
+
     // InputPanel.tsx
     describeWorkflow: 'Describe Your Workflow',
     promptAssistant: 'Prompt Assistant',
@@ -62,6 +72,7 @@ export const translations = {
     outputWorkflow: 'Workflow',
     outputRequirements: 'Requirements',
     outputLogs: 'Logs',
+    outputExecution: 'Execution',
     tooltipValidate: 'Validate & Correct Workflow',
     tooltipRun: 'Run Workflow in ComfyUI',
     tooltipLoad: 'Load Workflow in ComfyUI (Copy & Paste)',
@@ -216,6 +227,16 @@ export const translations = {
     toastJsonImported: 'Workflow JSON erfolgreich importiert!',
     toastJsonImportFailed: 'JSON-Import fehlgeschlagen. Ungültiges Format.',
     
+    // Execution Logs
+    logStarting: 'Starte Ausführung...',
+    logSending: 'Sende Workflow an ComfyUI API...',
+    logError: 'ComfyUI Fehler:',
+    logAutoFixStarting: 'Auto-Fix gestartet. KI analysiert den Fehler...',
+    logAutoFixApplied: 'KI-Korrektur angewendet:',
+    logRetrying: 'Wiederhole Ausführung mit korrigiertem Workflow...',
+    logSuccess: 'Workflow erfolgreich ausgeführt!',
+    logMaxRetries: 'Maximale Wiederholungen erreicht. Ausführung fehlgeschlagen.',
+
     // InputPanel.tsx
     describeWorkflow: 'Beschreiben Sie Ihren Workflow',
     promptAssistant: 'Prompt-Assistent',
@@ -239,6 +260,7 @@ export const translations = {
     outputWorkflow: 'Workflow',
     outputRequirements: 'Anforderungen',
     outputLogs: 'Protokolle',
+    outputExecution: 'Ausführung',
     tooltipValidate: 'Workflow validieren & korrigieren',
     tooltipRun: 'Workflow in ComfyUI ausführen',
     tooltipLoad: 'Workflow in ComfyUI laden (Kopieren & Einfügen)',

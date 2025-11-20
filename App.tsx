@@ -17,7 +17,7 @@ import { generateWorkflow, validateAndCorrectWorkflow, debugAndCorrectWorkflow }
 import { executeWorkflow, uploadImage } from './services/comfyuiService';
 import { getServerInventory } from './services/localLlmService';
 import { initializeApiKey } from './services/apiKeyService';
-import type { GeneratedWorkflowResponse, HistoryEntry, ComfyUIWorkflow, SystemInventory } from './types';
+import type { GeneratedWorkflowResponse, HistoryEntry, ComfyUIWorkflow, SystemInventory, ExecutionLogEntry } from './types';
 import { useLanguage } from './context/LanguageContext';
 import { useTranslations } from './hooks/useTranslations';
 
@@ -35,6 +35,7 @@ const App: React.FC = () => {
   const [generatedData, setGeneratedData] = useState<GeneratedWorkflowResponse | null>(null);
   const [loadingState, setLoadingState] = useState<LoadingState>({ active: false, message: '', progress: 0 });
   const [mainView, setMainView] = useState<MainView>('generator');
+  const [executionLogs, setExecutionLogs] = useState<ExecutionLogEntry[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>(() => {
     try {
       const savedHistory = localStorage.getItem('workflowHistory');
@@ -123,11 +124,21 @@ const App: React.FC = () => {
     }
     return true;
   };
+  
+  const addExecutionLog = (message: string, level: ExecutionLogEntry['level'], details?: string) => {
+      setExecutionLogs(prev => [...prev, {
+          timestamp: Date.now(),
+          level,
+          message,
+          details
+      }]);
+  };
 
   const handleGenerate = async () => {
     if (!ensureApiKey() || !prompt.trim()) return;
     setGeneratedData(null);
     setSelectedHistoryId(null);
+    setExecutionLogs([]); // Clear previous logs on new generation
     let finalData: GeneratedWorkflowResponse | null = null;
     let uploadedImageName: string | undefined = undefined;
 
@@ -193,6 +204,7 @@ const App: React.FC = () => {
       
       setGeneratedData(importData);
       setSelectedHistoryId(null);
+      setExecutionLogs([]);
       showToast(t.toastJsonImported, 'success');
   };
 
@@ -243,27 +255,90 @@ const App: React.FC = () => {
       showToast(t.toastComfyUrlNotSet, 'error');
       return;
     }
-    
-    setLoadingState({ active: true, message: t.toastSendingWorkflow, progress: 0 });
 
-    await executeWorkflow(
-      generatedData.workflow,
-      comfyUIUrl,
-      (status) => { // onProgress
-        setLoadingState({ active: true, message: status.message, progress: status.progress });
-      },
-      () => { // onComplete
-        showToast(t.toastWorkflowExecutionComplete, 'success');
-        // Keep the final progress bar at 100% for a moment before hiding
-        setTimeout(() => {
-            setLoadingState({ active: false, message: '', progress: 0 });
-        }, 1500);
-      },
-      (error) => { // onError
-        showToast(t.toastWorkflowExecutionFailed(error.message), 'error');
+    // Initialize Loop Variables
+    const MAX_RETRIES = 2;
+    let currentWorkflow = generatedData.workflow;
+    let attempt = 0;
+    let success = false;
+
+    // Clear Logs for new run
+    setExecutionLogs([]);
+    setLoadingState({ active: true, message: t.toastSendingWorkflow, progress: 0 });
+    addExecutionLog(t.logStarting, 'info');
+
+    while (attempt <= MAX_RETRIES && !success) {
+        if (attempt > 0) {
+             setLoadingState({ active: true, message: `${t.logRetrying} (${attempt}/${MAX_RETRIES})`, progress: 0 });
+             addExecutionLog(`${t.logRetrying} (Attempt ${attempt}/${MAX_RETRIES})`, 'warning');
+        }
+
+        try {
+            addExecutionLog(t.logSending, 'info');
+            
+            // Execute
+            await executeWorkflow(
+              currentWorkflow,
+              comfyUIUrl,
+              (status) => { // onProgress
+                 setLoadingState({ active: true, message: status.message, progress: status.progress });
+              }
+            );
+            
+            // If we reach here, no error was thrown
+            success = true;
+            addExecutionLog(t.logSuccess, 'success');
+            showToast(t.toastWorkflowExecutionComplete, 'success');
+
+        } catch (error: any) {
+            const errorMessage = error.message || "Unknown Error";
+            addExecutionLog(`${t.logError} ${errorMessage}`, 'error');
+            
+            if (attempt < MAX_RETRIES) {
+                // Auto-Fix Logic
+                addExecutionLog(t.logAutoFixStarting, 'ai');
+                setLoadingState({ active: true, message: t.loadingDebugging, progress: 50 });
+
+                try {
+                     const debugResponse = await debugAndCorrectWorkflow(currentWorkflow, errorMessage);
+                     
+                     // Log the AI reasoning
+                     if (debugResponse.correctionLog && debugResponse.correctionLog.length > 0) {
+                         debugResponse.correctionLog.forEach(log => {
+                             addExecutionLog(`${t.logAutoFixApplied} ${log.action}`, 'ai', log.reasoning);
+                         });
+                     } else {
+                         addExecutionLog(t.logAutoFixApplied, 'ai', "Applied structural corrections.");
+                     }
+
+                     // Update current workflow for next iteration
+                     currentWorkflow = debugResponse.correctedWorkflow;
+                     
+                     // Update UI state with the fixed workflow so user sees it
+                     setGeneratedData(prev => prev ? ({
+                         ...prev,
+                         workflow: debugResponse.correctedWorkflow,
+                         correctionLog: debugResponse.correctionLog
+                     }) : null);
+
+                } catch (aiError: any) {
+                    addExecutionLog(`AI Auto-Fix failed: ${aiError.message}`, 'error');
+                    break; // If AI fails, stop the loop
+                }
+
+            } else {
+                 addExecutionLog(t.logMaxRetries, 'error');
+                 showToast(t.toastWorkflowExecutionFailed(errorMessage), 'error');
+            }
+        }
+        
+        attempt++;
+    }
+
+    // Final cleanup
+    setTimeout(() => {
         setLoadingState({ active: false, message: '', progress: 0 });
-      }
-    );
+    }, 1500);
   };
 
   const handleSelectHistory = (entry: HistoryEntry) => {
@@ -271,6 +346,7 @@ const App: React.FC = () => {
     setGeneratedData(entry.data);
     setSelectedHistoryId(entry.id);
     setMainView('generator');
+    setExecutionLogs([]); // Clear logs when loading new history
     setUploadedImage(null); // Clear any uploaded image when loading from history
     showToast(t.toastHistoryLoaded, 'success');
   };
@@ -436,6 +512,7 @@ const App: React.FC = () => {
           
           <OutputPanel
             workflowData={generatedData}
+            executionLogs={executionLogs}
             onDownload={() => generatedData && handleDownload(generatedData)}
             onCopy={handleCopy}
             onRun={handleRunWorkflow}

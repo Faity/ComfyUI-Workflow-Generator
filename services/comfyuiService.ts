@@ -24,54 +24,25 @@ const getNetworkError = (error: TypeError, apiUrl: string, context: string): Err
 
 /**
  * Sends a workflow to a ComfyUI instance and listens for real-time progress via WebSocket.
+ * Returns a Promise that resolves when execution is complete, or rejects with a specific error.
+ * 
  * @param workflow The ComfyUI workflow object.
  * @param apiUrl The base URL of the ComfyUI API (e.g., http://127.0.0.1:8188).
  * @param onProgress Callback function to report progress updates.
- * @param onComplete Callback function invoked when the workflow execution is finished.
- * @param onError Callback function to report any errors during the process.
  */
 export const executeWorkflow = async (
   workflow: ComfyUIWorkflow,
   apiUrl: string,
-  onProgress: (status: ProgressStatus) => void,
-  onComplete: () => void,
-  onError: (error: Error) => void
-): Promise<void> => {
+  onProgress: (status: ProgressStatus) => void
+): Promise<{ prompt_id: string }> => {
     const clientId = uuidv4();
-    let promptId: string;
-
-    // --- STEP 1: CONVERSION (Graph -> API) ---
-    // We attempt to convert the workflow to the API format required by the /prompt endpoint.
-    // This endpoint (/workflow/convert) is often added by custom nodes (e.g., Mixlab) or specific backend logic.
-    // If this fails, we fall back to the original workflow, assuming it might already be in correct format.
-    let apiWorkflow = workflow; 
-    
-    try {
-        onProgress({ message: 'Converting workflow to API format...', progress: 1 });
-        
-        const convertEndpoint = new URL('/workflow/convert', apiUrl).toString();
-        const convertResponse = await fetch(convertEndpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(workflow),
-        });
-
-        if (convertResponse.ok) {
-            apiWorkflow = await convertResponse.json();
-            console.debug("Workflow successfully converted to API format.");
-        } else {
-            console.warn("Conversion endpoint did not return OK. Using original workflow.");
-        }
-    } catch (e) {
-        console.warn("Could not reach conversion endpoint (this is normal if no custom extensions are installed). Proceeding with original workflow.", e);
-    }
-    
-    // --- STEP 2: EXECUTION (POST to /prompt) ---
     const payload = {
-        prompt: apiWorkflow,
+        prompt: workflow,
         client_id: clientId,
     };
     
+    let promptId: string;
+
     // 1. Send the prompt via HTTP POST to get a prompt_id
     try {
         const endpoint = new URL('/prompt', apiUrl).toString();
@@ -80,10 +51,24 @@ export const executeWorkflow = async (
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
         });
+        
         if (!response.ok) {
-            const errorBody = await response.text();
-            throw new Error(`ComfyUI API error (${response.status}):\n${errorBody}`);
+            let errorBody = '';
+            try {
+                const errorJson = await response.json();
+                // ComfyUI typically returns { error: { type: '...', message: '...', details: '...' } }
+                if (errorJson.error && errorJson.error.message) {
+                    errorBody = `${errorJson.error.type}: ${errorJson.error.message}`;
+                    if (errorJson.error.details) errorBody += ` (${errorJson.error.details})`;
+                } else {
+                    errorBody = JSON.stringify(errorJson);
+                }
+            } catch (e) {
+                errorBody = await response.text();
+            }
+            throw new Error(`ComfyUI API Error (${response.status}): ${errorBody}`);
         }
+        
         const jsonResponse = await response.json();
         if (jsonResponse.error) {
             throw new Error(`ComfyUI prompt error: ${jsonResponse.error.type} - ${jsonResponse.message}`);
@@ -91,63 +76,79 @@ export const executeWorkflow = async (
         promptId = jsonResponse.prompt_id;
     } catch (error: any) {
         if (error instanceof TypeError) {
-            onError(getNetworkError(error, apiUrl, 'workflow execution'));
+            throw getNetworkError(error, apiUrl, 'workflow execution');
         } else {
-            onError(error);
+            throw error;
         }
-        return;
     }
   
     // 2. Open a WebSocket connection to listen for progress
-    try {
-        const url = new URL(apiUrl);
-        const wsProtocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsProtocol}//${url.host}/ws?clientId=${clientId}`;
-        const ws = new WebSocket(wsUrl);
+    // We wrap this in a Promise that resolves when the execution is finished
+    return new Promise((resolve, reject) => {
+        try {
+            const url = new URL(apiUrl);
+            const wsProtocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${url.host}/ws?clientId=${clientId}`;
+            const ws = new WebSocket(wsUrl);
 
-        let currentlyExecutingNode: string | null = null;
-        const nodesById = new Map(workflow.nodes.map(node => [String(node.id), node.title || node.type]));
+            let currentlyExecutingNode: string | null = null;
+            const nodesById = new Map(workflow.nodes.map(node => [String(node.id), node.title || node.type]));
 
-        ws.onmessage = (event) => {
-            if (typeof event.data !== 'string') return;
-            const data = JSON.parse(event.data);
+            ws.onmessage = (event) => {
+                if (typeof event.data !== 'string') return;
+                try {
+                    const data = JSON.parse(event.data);
 
-            if (data.type === 'executing' && data.data.prompt_id === promptId) {
-                if (data.data.node === null) {
-                    // A null node ID in an 'executing' message signifies the end of the queue.
-                    currentlyExecutingNode = null;
-                    if (ws.readyState === WebSocket.OPEN) {
-                        ws.close();
+                    if (data.type === 'executing' && data.data.prompt_id === promptId) {
+                        if (data.data.node === null) {
+                            // A null node ID in an 'executing' message signifies the end of the queue.
+                            if (ws.readyState === WebSocket.OPEN) {
+                                ws.close();
+                            }
+                            resolve({ prompt_id: promptId });
+                        } else {
+                            // A new node is starting execution.
+                            currentlyExecutingNode = nodesById.get(data.data.node) || `Node ${data.data.node}`;
+                            onProgress({ message: `Executing: ${currentlyExecutingNode}...`, progress: 0 });
+                        }
                     }
-                    onComplete();
-                } else {
-                    // A new node is starting execution.
-                    currentlyExecutingNode = nodesById.get(data.data.node) || `Node ${data.data.node}`;
-                    onProgress({ message: `Executing: ${currentlyExecutingNode}...`, progress: 0 });
+
+                    if (data.type === 'progress' && data.data.prompt_id === promptId) {
+                        const { value, max } = data.data;
+                        const progress = (value / max) * 100;
+                        const message = currentlyExecutingNode 
+                            ? `Executing: ${currentlyExecutingNode} (${value}/${max})` 
+                            : `Processing... (${value}/${max})`;
+                        onProgress({ message, progress });
+                    }
+                    
+                    // Handle WebSocket-reported errors (rare but possible)
+                    if (data.type === 'execution_error' && data.data.prompt_id === promptId) {
+                         if (ws.readyState === WebSocket.OPEN) ws.close();
+                         reject(new Error(`Execution Error: ${JSON.stringify(data.data)}`));
+                    }
+
+                } catch (e) {
+                    // Ignore parse errors
                 }
-            }
+            };
 
-            if (data.type === 'progress' && data.data.prompt_id === promptId) {
-                const { value, max } = data.data;
-                const progress = (value / max) * 100;
-                const message = currentlyExecutingNode 
-                    ? `Executing: ${currentlyExecutingNode} (${value}/${max})` 
-                    : `Processing... (${value}/${max})`;
-                onProgress({ message, progress });
-            }
-        };
+            ws.onerror = (event) => {
+                console.error('WebSocket error:', event);
+                if (ws.readyState === WebSocket.OPEN) ws.close();
+                reject(new Error('WebSocket connection error. Could not get progress updates.'));
+            };
+            
+            ws.onclose = () => {
+                 // If closed unexpectedly before completion logic
+                 // We can't easily distinguish between a clean close after 'executing: null' and a drop,
+                 // so we rely on the 'executing: null' message to call resolve().
+            };
 
-        ws.onerror = (event) => {
-            console.error('WebSocket error:', event);
-            onError(new Error('WebSocket connection error. Could not get progress updates.'));
-            if(ws.readyState === WebSocket.OPEN) {
-              ws.close();
-            }
-        };
-
-    } catch (error: any) {
-        onError(error);
-    }
+        } catch (error: any) {
+            reject(error);
+        }
+    });
 };
 
 /**
