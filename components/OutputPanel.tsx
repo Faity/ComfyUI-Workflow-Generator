@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import WorkflowVisualizer from './WorkflowVisualizer';
-import type { GeneratedWorkflowResponse, ValidationLogEntry, DebugLogEntry, ExecutionLogEntry } from '../types';
-import { DownloadIcon, ClipboardIcon, PlayIcon, BugAntIcon, Square2StackIcon, CheckCircleIcon, ExclamationCircleIcon, SparklesIcon } from './Icons';
+import type { GeneratedWorkflowResponse, ValidationLogEntry, DebugLogEntry } from '../types';
+import { DownloadIcon, ClipboardIcon, PlayIcon, BugAntIcon, Square2StackIcon } from './Icons';
 import { useTranslations } from '../hooks/useTranslations';
 import ProgressBarLoader from './Loader';
 
 interface OutputPanelProps {
   workflowData: GeneratedWorkflowResponse | null;
-  executionLogs?: ExecutionLogEntry[];
   onDownload: () => void;
   onCopy: () => void;
   onRun: () => void;
@@ -17,11 +16,10 @@ interface OutputPanelProps {
   loadingState?: { message: string, progress: number };
 }
 
-type Tab = 'visualizer' | 'workflow' | 'requirements' | 'logs' | 'execution';
+type Tab = 'visualizer' | 'workflow' | 'requirements' | 'logs';
 
-const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, executionLogs = [], onDownload, onCopy, onRun, onValidate, onLoad, isLoading = false, loadingState = {message: '', progress: 0} }) => {
+const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, onDownload, onCopy, onRun, onValidate, onLoad, isLoading = false, loadingState = {message: '', progress: 0} }) => {
   const [activeTab, setActiveTab] = useState<Tab>('visualizer');
-  const logsEndRef = useRef<HTMLDivElement>(null);
   const t = useTranslations();
 
   useEffect(() => {
@@ -38,20 +36,6 @@ const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, executionLogs =
         setActiveTab('visualizer');
     }
   }, [workflowData]);
-
-  // Automatically switch to execution tab when logs start appearing
-  useEffect(() => {
-      if (executionLogs.length > 0) {
-          setActiveTab('execution');
-      }
-  }, [executionLogs.length]);
-
-  // Auto-scroll execution logs
-  useEffect(() => {
-      if (activeTab === 'execution' && logsEndRef.current) {
-          logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
-      }
-  }, [executionLogs, activeTab]);
 
   if (!workflowData) {
     return (
@@ -117,20 +101,16 @@ const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, executionLogs =
   if (hasLogs) {
       tabConfig.push({ key: 'logs', label: t.outputLogs });
   }
-  
-  if (executionLogs.length > 0) {
-      tabConfig.push({ key: 'execution', label: t.outputExecution });
-  }
 
   return (
     <div className="relative w-full lg:w-1/2 glass-panel rounded-2xl flex flex-col overflow-hidden">
       <div className="flex-shrink-0 p-3 flex justify-between items-center border-b border-slate-200">
-        <div className="flex space-x-1 bg-slate-100 p-1 rounded-full border border-slate-200 overflow-x-auto no-scrollbar max-w-[60%]">
+        <div className="flex space-x-1 bg-slate-100 p-1 rounded-full border border-slate-200">
           {tabConfig.map(tab => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all duration-300 whitespace-nowrap ${
+              className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all duration-300 ${
                 activeTab === tab.key ? 'bg-white text-teal-600 shadow-sm' : 'text-slate-500 hover:bg-white/50'
               }`}
             >
@@ -179,40 +159,6 @@ const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, executionLogs =
                 {validationLog && validationLog.map(renderLogEntry)}
                 {correctionLog && correctionLog.map(renderLogEntry)}
             </div>
-        )}
-        {activeTab === 'execution' && (
-             <div className="p-0 h-full bg-slate-900 text-slate-200 font-mono text-sm overflow-y-auto">
-                 <div className="p-4 space-y-3">
-                     {executionLogs.map((log, index) => (
-                         <div key={index} className="flex items-start space-x-3 border-b border-slate-800 pb-3 last:border-0">
-                             <span className="text-slate-500 text-xs whitespace-nowrap pt-0.5">{new Date(log.timestamp).toLocaleTimeString()}</span>
-                             <div className="flex-grow">
-                                 <div className="flex items-center">
-                                     {log.level === 'success' && <CheckCircleIcon className="w-4 h-4 text-green-500 mr-2" />}
-                                     {log.level === 'error' && <ExclamationCircleIcon className="w-4 h-4 text-red-500 mr-2" />}
-                                     {log.level === 'warning' && <ExclamationCircleIcon className="w-4 h-4 text-yellow-500 mr-2" />}
-                                     {log.level === 'ai' && <SparklesIcon className="w-4 h-4 text-sky-400 mr-2" />}
-                                     {log.level === 'info' && <span className="w-4 h-4 mr-2 block text-slate-500">&gt;</span>}
-                                     
-                                     <span className={`font-semibold ${
-                                         log.level === 'error' ? 'text-red-400' : 
-                                         log.level === 'success' ? 'text-green-400' : 
-                                         log.level === 'ai' ? 'text-sky-400' : 
-                                         log.level === 'warning' ? 'text-yellow-400' :
-                                         'text-slate-200'
-                                     }`}>{log.message}</span>
-                                 </div>
-                                 {log.details && (
-                                     <div className="mt-1 ml-6 p-2 bg-black/30 rounded border-l-2 border-slate-600 text-slate-400 text-xs whitespace-pre-wrap">
-                                         {log.details}
-                                     </div>
-                                 )}
-                             </div>
-                         </div>
-                     ))}
-                     <div ref={logsEndRef} />
-                 </div>
-             </div>
         )}
       </div>
       {isLoading && (

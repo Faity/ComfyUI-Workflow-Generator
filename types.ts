@@ -93,10 +93,3 @@ export interface ComfyUIImageUploadResponse {
   subfolder: string;
   type: 'input' | 'temp';
 }
-
-export interface ExecutionLogEntry {
-    timestamp: number;
-    level: 'info' | 'error' | 'success' | 'warning' | 'ai';
-    message: string;
-    details?: string;
-}

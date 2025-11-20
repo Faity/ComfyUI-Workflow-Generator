@@ -24,26 +24,53 @@ const getNetworkError = (error: TypeError, apiUrl: string, context: string): Err
 
 /**
  * Sends a workflow to a ComfyUI instance and listens for real-time progress via WebSocket.
- * Returns a Promise that resolves when execution is complete, or rejects with a specific error.
- * 
  * @param workflow The ComfyUI workflow object.
  * @param apiUrl The base URL of the ComfyUI API (e.g., http://127.0.0.1:8188).
  * @param onProgress Callback function to report progress updates.
+ * @param onComplete Callback function invoked when the workflow execution is finished.
+ * @param onError Callback function to report any errors during the process.
  */
 export const executeWorkflow = async (
   workflow: ComfyUIWorkflow,
   apiUrl: string,
-  onProgress: (status: ProgressStatus) => void
-): Promise<{ prompt_id: string }> => {
+  onProgress: (status: ProgressStatus) => void,
+  onComplete: () => void,
+  onError: (error: Error) => void
+): Promise<void> => {
     const clientId = uuidv4();
+    let promptId: string;
+    let apiWorkflow = workflow; // Standard: Wir versuchen das Original
+
+    // --- SCHRITT 1: KONVERTIERUNG (GUI -> API) ---
+    try {
+        onProgress({ message: 'Konvertiere Workflow in API-Format...', progress: 5 });
+        
+        // Wir senden den GUI-Workflow an den Helfer-Endpunkt auf dem Server
+        const convertEndpoint = new URL('/workflow/convert', apiUrl).toString();
+        
+        const convertResponse = await fetch(convertEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(workflow),
+        });
+
+        if (convertResponse.ok) {
+            // Erfolg! Wir haben das korrekte API-Format erhalten
+            apiWorkflow = await convertResponse.json();
+            console.log("Workflow erfolgreich konvertiert.");
+        } else {
+            console.warn("Konvertierung fehlgeschlagen (Server hat kein /workflow/convert?). Versuche Original.");
+        }
+    } catch (e) {
+        console.warn("Konnte Konvertierungs-Endpunkt nicht erreichen.", e);
+    }
+
+    // --- SCHRITT 2: AUSFÜHRUNG (API-Format senden) ---
     const payload = {
-        prompt: workflow,
+        prompt: apiWorkflow, // Hier senden wir jetzt das konvertierte Format!
         client_id: clientId,
     };
-    
-    let promptId: string;
 
-    // 1. Send the prompt via HTTP POST to get a prompt_id
     try {
         const endpoint = new URL('/prompt', apiUrl).toString();
         const response = await fetch(endpoint, {
@@ -51,104 +78,63 @@ export const executeWorkflow = async (
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
         });
-        
+
         if (!response.ok) {
-            let errorBody = '';
-            try {
-                const errorJson = await response.json();
-                // ComfyUI typically returns { error: { type: '...', message: '...', details: '...' } }
-                if (errorJson.error && errorJson.error.message) {
-                    errorBody = `${errorJson.error.type}: ${errorJson.error.message}`;
-                    if (errorJson.error.details) errorBody += ` (${errorJson.error.details})`;
-                } else {
-                    errorBody = JSON.stringify(errorJson);
-                }
-            } catch (e) {
-                errorBody = await response.text();
-            }
-            throw new Error(`ComfyUI API Error (${response.status}): ${errorBody}`);
+            const errorBody = await response.text();
+            throw new Error(`ComfyUI API error (${response.status}):\n${errorBody}`);
         }
-        
         const jsonResponse = await response.json();
         if (jsonResponse.error) {
             throw new Error(`ComfyUI prompt error: ${jsonResponse.error.type} - ${jsonResponse.message}`);
         }
         promptId = jsonResponse.prompt_id;
     } catch (error: any) {
-        if (error instanceof TypeError) {
-            throw getNetworkError(error, apiUrl, 'workflow execution');
-        } else {
-            throw error;
-        }
+        onError(error);
+        return;
     }
   
-    // 2. Open a WebSocket connection to listen for progress
-    // We wrap this in a Promise that resolves when the execution is finished
-    return new Promise((resolve, reject) => {
-        try {
-            const url = new URL(apiUrl);
-            const wsProtocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${wsProtocol}//${url.host}/ws?clientId=${clientId}`;
-            const ws = new WebSocket(wsUrl);
+    // --- SCHRITT 3: FORTSCHRITT (WebSocket) ---
+    try {
+        const url = new URL(apiUrl);
+        const wsProtocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${url.host}/ws?clientId=${clientId}`;
+        const ws = new WebSocket(wsUrl);
+        
+        // Mapping für schöne Namen in der Anzeige
+        const nodesById = new Map(workflow.nodes.map(node => [String(node.id), node.title || node.type]));
 
-            let currentlyExecutingNode: string | null = null;
-            const nodesById = new Map(workflow.nodes.map(node => [String(node.id), node.title || node.type]));
+        ws.onmessage = (event) => {
+            if (typeof event.data !== 'string') return;
+            const data = JSON.parse(event.data);
 
-            ws.onmessage = (event) => {
-                if (typeof event.data !== 'string') return;
-                try {
-                    const data = JSON.parse(event.data);
-
-                    if (data.type === 'executing' && data.data.prompt_id === promptId) {
-                        if (data.data.node === null) {
-                            // A null node ID in an 'executing' message signifies the end of the queue.
-                            if (ws.readyState === WebSocket.OPEN) {
-                                ws.close();
-                            }
-                            resolve({ prompt_id: promptId });
-                        } else {
-                            // A new node is starting execution.
-                            currentlyExecutingNode = nodesById.get(data.data.node) || `Node ${data.data.node}`;
-                            onProgress({ message: `Executing: ${currentlyExecutingNode}...`, progress: 0 });
-                        }
-                    }
-
-                    if (data.type === 'progress' && data.data.prompt_id === promptId) {
-                        const { value, max } = data.data;
-                        const progress = (value / max) * 100;
-                        const message = currentlyExecutingNode 
-                            ? `Executing: ${currentlyExecutingNode} (${value}/${max})` 
-                            : `Processing... (${value}/${max})`;
-                        onProgress({ message, progress });
-                    }
-                    
-                    // Handle WebSocket-reported errors (rare but possible)
-                    if (data.type === 'execution_error' && data.data.prompt_id === promptId) {
-                         if (ws.readyState === WebSocket.OPEN) ws.close();
-                         reject(new Error(`Execution Error: ${JSON.stringify(data.data)}`));
-                    }
-
-                } catch (e) {
-                    // Ignore parse errors
+            if (data.type === 'executing' && data.data.prompt_id === promptId) {
+                if (data.data.node === null) {
+                    // Fertig!
+                    if (ws.readyState === WebSocket.OPEN) ws.close();
+                    onComplete();
+                } else {
+                    // Neuer Node startet
+                    const nodeName = nodesById.get(String(data.data.node)) || `Node ${data.data.node}`;
+                    onProgress({ message: `Executing: ${nodeName}...`, progress: 0 });
                 }
-            };
+            }
 
-            ws.onerror = (event) => {
-                console.error('WebSocket error:', event);
-                if (ws.readyState === WebSocket.OPEN) ws.close();
-                reject(new Error('WebSocket connection error. Could not get progress updates.'));
-            };
-            
-            ws.onclose = () => {
-                 // If closed unexpectedly before completion logic
-                 // We can't easily distinguish between a clean close after 'executing: null' and a drop,
-                 // so we rely on the 'executing: null' message to call resolve().
-            };
+            if (data.type === 'progress' && data.data.prompt_id === promptId) {
+                const { value, max } = data.data;
+                const progress = (value / max) * 100;
+                onProgress({ message: `Processing... (${value}/${max})`, progress });
+            }
+        };
 
-        } catch (error: any) {
-            reject(error);
-        }
-    });
+        ws.onerror = (event) => {
+            console.error('WebSocket error:', event);
+            onError(new Error('WebSocket connection error.'));
+            if(ws.readyState === WebSocket.OPEN) ws.close();
+        };
+
+    } catch (error: any) {
+        onError(error);
+    }
 };
 
 /**
@@ -195,24 +181,32 @@ export const uploadImage = async (imageFile: File, apiUrl: string): Promise<Comf
 export const testComfyUIConnection = async (apiUrl: string): Promise<{ success: boolean; message: string; data?: any; isCorsError?: boolean; isMixedContentError?: boolean; }> => {
     let endpoint: string;
     try {
-        // Use GET for system_stats. This is a standard endpoint to check if ComfyUI is alive.
-        // If CORS is NOT enabled, the browser will block the read of the response, causing a TypeError.
-        // This is sufficient to detect CORS issues without triggering potential 405 Method Not Allowed errors
-        // that might occur if we tried to POST to a GET-only endpoint (which might not return CORS headers in the 405 response).
+        // To accurately test the CORS preflight, we POST to a known GET-only endpoint.
+        // A successful connection will be blocked by CORS if not configured, or will
+        // return a 405 "Method Not Allowed" error if CORS is configured correctly.
+        // This is a reliable way to test the actual browser-server communication.
         endpoint = new URL('/system_stats', apiUrl).toString();
     } catch (e) {
         return { success: false, message: `Invalid URL format: ${apiUrl}` };
     }
 
     try {
+        // Sending a POST request forces the browser to make a CORS preflight (OPTIONS) request.
         const response = await fetch(endpoint, {
-            method: 'GET',
-            cache: 'no-store', // Ensure we don't get a cached response
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({}),
         });
 
-        if (response.ok) {
-            return { success: true, message: 'Connection to ComfyUI successful! The server is reachable.' };
+        // A 405 "Method Not Allowed" is a SUCCESS for this test.
+        // It means the CORS preflight passed, the server was reached, and it correctly
+        // responded that the endpoint doesn't support POST. The connection is valid.
+        if (response.ok || response.status === 405) {
+            return { success: true, message: 'Connection to ComfyUI successful! The server is reachable and CORS is configured correctly.' };
         } else {
+             // Any other error status indicates a problem beyond the expected 405.
              return { 
                 success: false, 
                 message: `Connection failed. Server responded with HTTP status ${response.status} ${response.statusText}. Please check if the URL is correct and the server is running.` 
