@@ -21,7 +21,7 @@ import type { GeneratedWorkflowResponse, HistoryEntry, ComfyUIWorkflow, SystemIn
 import { useLanguage } from './context/LanguageContext';
 import { useTranslations } from './hooks/useTranslations';
 
-const version = "1.2.0";
+const version = "1.3.0";
 
 type MainView = 'generator' | 'tester' | 'history' | 'local_llm' | 'documentation';
 type ToastState = { id: string; message: string; type: 'success' | 'error' };
