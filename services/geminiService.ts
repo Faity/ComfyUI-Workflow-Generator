@@ -144,6 +144,8 @@ When arranging nodes in the workflow, place them in a logical
 
 const SYSTEM_INSTRUCTION_VALIDATOR = `You are a ComfyUI Workflow Analyzer and Corrector. Your task is to receive a ComfyUI workflow JSON, meticulously analyze it for correctness and logical consistency, and then return a corrected version along with a validation log.
 
+{{RAG_CONTEXT_PLACEHOLDER}}
+
 **INPUT:**
 You will be given a JSON string representing a ComfyUI workflow.
 
@@ -202,6 +204,8 @@ Example of the final JSON output structure:
 `;
 
 const SYSTEM_INSTRUCTION_DEBUGGER = `You are an expert ComfyUI debugger. Your task is to analyze a given ComfyUI workflow and a specific error message produced by it, then correct the workflow to fix the error.
+
+{{RAG_CONTEXT_PLACEHOLDER}}
 
 **INPUT:**
 You will be given a JSON string containing two keys: "workflow" and "errorMessage".
@@ -424,10 +428,32 @@ ${JSON.stringify(inventory, null, 2)}
   }
 };
 
-export const validateAndCorrectWorkflow = async (workflow: ComfyUIWorkflow): Promise<ValidationResponse> => {
+export const validateAndCorrectWorkflow = async (workflow: ComfyUIWorkflow, localLlmApiUrl?: string): Promise<ValidationResponse> => {
     if (!process.env.API_KEY) {
         throw new Error("API key is missing. Please set the API_KEY environment variable.");
     }
+
+    // 1. Fetch RAG Context if API URL is present
+    let ragContextBlock = '';
+    if (localLlmApiUrl) {
+        try {
+            // For validation, we ask RAG about common validation rules or known issues with nodes
+            const ragContext = await queryRag("ComfyUI workflow validation rules and node compatibility common errors", localLlmApiUrl);
+            if (ragContext && ragContext.trim()) {
+                ragContextBlock = `
+**RAG-KNOWLEDGE BASE:**
+Use the following retrieved knowledge to help validate the workflow and check for specific node requirements or known issues:
+\`\`\`
+${ragContext.trim()}
+\`\`\`
+`;
+            }
+        } catch (error) {
+            console.warn("Could not query RAG endpoint during validation.", error);
+        }
+    }
+
+    const finalSystemInstruction = SYSTEM_INSTRUCTION_VALIDATOR.replace('{{RAG_CONTEXT_PLACEHOLDER}}', ragContextBlock);
 
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const workflowString = JSON.stringify(workflow, null, 2);
@@ -439,7 +465,7 @@ export const validateAndCorrectWorkflow = async (workflow: ComfyUIWorkflow): Pro
                 model: 'gemini-2.5-flash',
                 contents: `Please validate and correct the following ComfyUI workflow:\n\n${workflowString}`,
                 config: {
-                    systemInstruction: SYSTEM_INSTRUCTION_VALIDATOR,
+                    systemInstruction: finalSystemInstruction,
                     responseMimeType: "application/json",
                 }
             });
@@ -478,10 +504,32 @@ export const validateAndCorrectWorkflow = async (workflow: ComfyUIWorkflow): Pro
     }
 };
 
-export const debugAndCorrectWorkflow = async (workflow: ComfyUIWorkflow, errorMessage: string): Promise<DebugResponse> => {
+export const debugAndCorrectWorkflow = async (workflow: ComfyUIWorkflow, errorMessage: string, localLlmApiUrl?: string): Promise<DebugResponse> => {
     if (!process.env.API_KEY) {
         throw new Error("API key is missing. Please set the API_KEY environment variable.");
     }
+
+    // 1. Fetch RAG Context using the Error Message
+    let ragContextBlock = '';
+    if (localLlmApiUrl) {
+        try {
+            // For debugging, the error message is the perfect query for the RAG
+            const ragContext = await queryRag(`ComfyUI error solution: ${errorMessage}`, localLlmApiUrl);
+            if (ragContext && ragContext.trim()) {
+                ragContextBlock = `
+**RAG-KNOWLEDGE BASE (Relevant to Error):**
+Use the following retrieved knowledge to identify the cause of the error and find a solution:
+\`\`\`
+${ragContext.trim()}
+\`\`\`
+`;
+            }
+        } catch (error) {
+            console.warn("Could not query RAG endpoint during debugging.", error);
+        }
+    }
+
+    const finalSystemInstruction = SYSTEM_INSTRUCTION_DEBUGGER.replace('{{RAG_CONTEXT_PLACEHOLDER}}', ragContextBlock);
 
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const requestPayload = {
@@ -497,7 +545,7 @@ export const debugAndCorrectWorkflow = async (workflow: ComfyUIWorkflow, errorMe
                 model: 'gemini-2.5-flash',
                 contents: payloadString,
                 config: {
-                    systemInstruction: SYSTEM_INSTRUCTION_DEBUGGER,
+                    systemInstruction: finalSystemInstruction,
                     responseMimeType: "application/json",
                 }
             });

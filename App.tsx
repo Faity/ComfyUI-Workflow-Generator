@@ -174,7 +174,8 @@ const App: React.FC = () => {
       if (llmProvider === 'local') {
            validatedResponse = await validateAndCorrectWorkflowLocal(response.workflow, localLlmApiUrl, localLlmModel);
       } else {
-           validatedResponse = await validateAndCorrectWorkflow(response.workflow);
+           // We pass localLlmApiUrl to allow Gemini to use the RAG via the local endpoint if available
+           validatedResponse = await validateAndCorrectWorkflow(response.workflow, localLlmApiUrl);
       }
 
       finalData = {
@@ -243,9 +244,11 @@ const App: React.FC = () => {
         } else {
             if (errorMessage.trim()) {
                 setLoadingState({ active: true, message: t.loadingDebugging, progress: 50 });
-                response = await debugAndCorrectWorkflow(workflowToProcess, errorMessage);
+                // Pass localLlmApiUrl for RAG usage during debugging
+                response = await debugAndCorrectWorkflow(workflowToProcess, errorMessage, localLlmApiUrl);
             } else {
-                response = await validateAndCorrectWorkflow(workflowToProcess);
+                // Pass localLlmApiUrl for RAG usage during validation
+                response = await validateAndCorrectWorkflow(workflowToProcess, localLlmApiUrl);
             }
         }
         

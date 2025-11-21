@@ -112,6 +112,8 @@ Example of the final JSON output structure:
 
 const SYSTEM_INSTRUCTION_VALIDATOR = `You are a ComfyUI Workflow Analyzer and Corrector. Your task is to receive a ComfyUI workflow JSON, meticulously analyze it for correctness and logical consistency, and then return a corrected version along with a validation log.
 
+{{RAG_CONTEXT_PLACEHOLDER}}
+
 **INPUT:**
 You will be given a JSON string representing a ComfyUI workflow.
 
@@ -135,6 +137,8 @@ Your response MUST be ONLY a single, raw, valid JSON object. Do NOT include any 
 `;
 
 const SYSTEM_INSTRUCTION_DEBUGGER = `You are an expert ComfyUI debugger. Your task is to analyze a given ComfyUI workflow and a specific error message produced by it, then correct the workflow to fix the error.
+
+{{RAG_CONTEXT_PLACEHOLDER}}
 
 **INPUT:**
 You will be given a JSON string containing two keys: "workflow" and "errorMessage".
@@ -219,7 +223,7 @@ export const generateWorkflowLocal = async (
     if (!localLlmApiUrl) throw new Error("Local LLM API URL is not configured.");
     if (!localLlmModel) throw new Error("Local LLM Model Name is not configured.");
 
-    // 1. RAG Context Retrieval (same logic as geminiService)
+    // 1. RAG Context Retrieval
     let ragContextBlock = '';
     try {
         const ragContext = await queryRag(description, localLlmApiUrl);
@@ -292,11 +296,30 @@ export const validateAndCorrectWorkflowLocal = async (
     if (!localLlmApiUrl) throw new Error("Local LLM API URL is not configured.");
     if (!localLlmModel) throw new Error("Local LLM Model Name is not configured.");
 
+    // 1. Retrieve RAG Context for Validation
+    let ragContextBlock = '';
+    try {
+        const ragContext = await queryRag("ComfyUI workflow validation rules and node compatibility common errors", localLlmApiUrl);
+        if (ragContext && ragContext.trim()) {
+            ragContextBlock = `
+**RAG-KNOWLEDGE BASE:**
+Use the following retrieved knowledge to help validate the workflow:
+\`\`\`
+${ragContext.trim()}
+\`\`\`
+`;
+        }
+    } catch (error) {
+        console.warn("Could not query RAG endpoint during validation (local).", error);
+    }
+
+    const finalSystemInstruction = SYSTEM_INSTRUCTION_VALIDATOR.replace('{{RAG_CONTEXT_PLACEHOLDER}}', ragContextBlock);
+
     const workflowString = JSON.stringify(workflow, null, 2);
     
     try {
         const content = await callLocalLlmChat(localLlmApiUrl, localLlmModel, [
-            { role: "system", content: SYSTEM_INSTRUCTION_VALIDATOR },
+            { role: "system", content: finalSystemInstruction },
             { role: "user", content: `Please validate and correct this workflow:\n\n${workflowString}` }
         ]);
 
@@ -319,11 +342,30 @@ export const debugAndCorrectWorkflowLocal = async (
     if (!localLlmApiUrl) throw new Error("Local LLM API URL is not configured.");
     if (!localLlmModel) throw new Error("Local LLM Model Name is not configured.");
 
+    // 1. Retrieve RAG Context based on Error Message
+    let ragContextBlock = '';
+    try {
+        const ragContext = await queryRag(`ComfyUI error solution: ${errorMessage}`, localLlmApiUrl);
+        if (ragContext && ragContext.trim()) {
+            ragContextBlock = `
+**RAG-KNOWLEDGE BASE (Relevant to Error):**
+Use the following retrieved knowledge to help fix the error:
+\`\`\`
+${ragContext.trim()}
+\`\`\`
+`;
+        }
+    } catch (error) {
+        console.warn("Could not query RAG endpoint during debugging (local).", error);
+    }
+
+    const finalSystemInstruction = SYSTEM_INSTRUCTION_DEBUGGER.replace('{{RAG_CONTEXT_PLACEHOLDER}}', ragContextBlock);
+
     const requestPayload = JSON.stringify({ workflow, errorMessage }, null, 2);
 
     try {
         const content = await callLocalLlmChat(localLlmApiUrl, localLlmModel, [
-            { role: "system", content: SYSTEM_INSTRUCTION_DEBUGGER },
+            { role: "system", content: finalSystemInstruction },
             { role: "user", content: requestPayload }
         ]);
 
