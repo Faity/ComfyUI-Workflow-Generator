@@ -93,3 +93,5 @@ export interface ComfyUIImageUploadResponse {
   subfolder: string;
   type: 'input' | 'temp';
 }
+
+export type LlmProvider = 'gemini' | 'local';

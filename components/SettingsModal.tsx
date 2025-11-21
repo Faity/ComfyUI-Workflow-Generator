@@ -4,6 +4,7 @@ import { DownloadIcon, CheckCircleIcon, ExclamationCircleIcon } from './Icons';
 import { testComfyUIConnection } from '../services/comfyuiService';
 import { testLocalLlmConnection } from '../services/localLlmService';
 import type { RagProvider } from '../App';
+import type { LlmProvider } from '../types';
 
 
 interface SettingsModalProps {
@@ -17,11 +18,23 @@ interface SettingsModalProps {
   setRagProvider: (provider: RagProvider) => void;
   onDownloadSourceCode: () => void;
   version: string;
+  llmProvider: LlmProvider;
+  setLlmProvider: (provider: LlmProvider) => void;
+  localLlmModel: string;
+  setLocalLlmModel: (model: string) => void;
 }
 
 type TestStatus = 'idle' | 'testing' | 'success' | 'error';
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIUrl, setComfyUIUrl, localLlmApiUrl, setLocalLlmApiUrl, ragProvider, setRagProvider, onDownloadSourceCode, version }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ 
+    isOpen, onClose, 
+    comfyUIUrl, setComfyUIUrl, 
+    localLlmApiUrl, setLocalLlmApiUrl, 
+    ragProvider, setRagProvider, 
+    onDownloadSourceCode, version,
+    llmProvider, setLlmProvider,
+    localLlmModel, setLocalLlmModel
+}) => {
   const t = useTranslations();
   const [comfyTestStatus, setComfyTestStatus] = useState<TestStatus>('idle');
   const [comfyTestMessage, setComfyTestMessage] = useState<string>('');
@@ -93,10 +106,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
       aria-labelledby="settings-title"
     >
       <div
-        className="glass-panel rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+        className="glass-panel rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="flex items-center justify-between p-4 border-b border-slate-200">
+        <header className="flex items-center justify-between p-4 border-b border-slate-200 flex-shrink-0">
           <h2 id="settings-title" className="text-lg font-bold text-slate-800">{t.settingsTitle}</h2>
           <button
             onClick={onClose}
@@ -107,7 +120,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
           </button>
         </header>
 
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 overflow-y-auto">
             <div>
                 <label htmlFor="comfy-url-input" className="block text-sm font-medium text-slate-600 mb-2">{t.settingsComfyUrl}</label>
                 <div className="flex items-center space-x-2">
@@ -148,30 +161,70 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
                     {t.settingsComfyUrlHelp}
                 </p>
             </div>
-             <div>
-                <label htmlFor="local-llm-url-input" className="block text-sm font-medium text-slate-600 mb-2">{t.settingsLocalLlmUrl}</label>
-                 <div className="flex items-center space-x-2">
-                    <input
-                        id="local-llm-url-input"
-                        type="text"
-                        value={localLlmApiUrl}
-                        onChange={(e) => setLocalLlmApiUrl(e.target.value)}
-                        placeholder="http://127.0.0.1:8000"
-                        className="w-full p-2 bg-white border border-slate-300 focus:border-teal-500 rounded-lg focus:ring-2 focus:ring-teal-200 transition-all"
-                    />
-                    <div className="w-5 h-5 flex-shrink-0">{renderTestStatus(llmTestStatus, llmTestMessage)}</div>
-                    <button onClick={handleTestLocalLlm} disabled={llmTestStatus === 'testing'} className="px-4 py-2 text-sm bg-sky-500 text-white rounded-lg hover:bg-sky-600 disabled:opacity-50 transition-colors whitespace-nowrap shadow-sm">
-                        {t.settingsTestConnection}
-                    </button>
+            
+            <div className="border-t border-slate-200 pt-6">
+                 <h3 className="text-md font-semibold text-slate-800 mb-4">AI & Local LLM Configuration</h3>
+                 
+                 <div className="mb-4">
+                    <label className="block text-sm font-medium text-slate-600 mb-2">{t.settingsLlmProvider}</label>
+                    <div className="flex space-x-1 bg-slate-100 p-1 rounded-full border border-slate-200">
+                        <button 
+                            onClick={() => setLlmProvider('gemini')}
+                            className={`w-1/2 rounded-full py-1.5 text-sm transition-colors ${llmProvider === 'gemini' ? 'bg-white text-teal-600 shadow-sm' : 'text-slate-500 hover:bg-white/50'}`}
+                        >
+                            {t.settingsLlmProviderGemini}
+                        </button>
+                        <button 
+                            onClick={() => setLlmProvider('local')}
+                            className={`w-1/2 rounded-full py-1.5 text-sm transition-colors ${llmProvider === 'local' ? 'bg-white text-teal-600 shadow-sm' : 'text-slate-500 hover:bg-white/50'}`}
+                        >
+                            {t.settingsLlmProviderLocal}
+                        </button>
+                    </div>
+                    <p className="mt-2 text-xs text-slate-500">{t.settingsLlmProviderHelp}</p>
                 </div>
-                {llmTestStatus === 'error' && <p className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded-md">{llmTestMessage}</p>}
-                {llmTestStatus === 'success' && <p className="mt-2 text-xs text-green-600">{llmTestMessage}</p>}
-                <p className="mt-2 text-xs text-slate-500">
-                    {t.settingsLocalLlmUrlHelp}
-                </p>
-            </div>
-             <div className="border-t border-slate-200 pt-6 space-y-4">
-                <div>
+
+                <div className="mb-4">
+                    <label htmlFor="local-llm-url-input" className="block text-sm font-medium text-slate-600 mb-2">{t.settingsLocalLlmUrl}</label>
+                     <div className="flex items-center space-x-2">
+                        <input
+                            id="local-llm-url-input"
+                            type="text"
+                            value={localLlmApiUrl}
+                            onChange={(e) => setLocalLlmApiUrl(e.target.value)}
+                            placeholder="http://127.0.0.1:11434"
+                            className="w-full p-2 bg-white border border-slate-300 focus:border-teal-500 rounded-lg focus:ring-2 focus:ring-teal-200 transition-all"
+                        />
+                        <div className="w-5 h-5 flex-shrink-0">{renderTestStatus(llmTestStatus, llmTestMessage)}</div>
+                        <button onClick={handleTestLocalLlm} disabled={llmTestStatus === 'testing'} className="px-4 py-2 text-sm bg-sky-500 text-white rounded-lg hover:bg-sky-600 disabled:opacity-50 transition-colors whitespace-nowrap shadow-sm">
+                            {t.settingsTestConnection}
+                        </button>
+                    </div>
+                    {llmTestStatus === 'error' && <p className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded-md">{llmTestMessage}</p>}
+                    {llmTestStatus === 'success' && <p className="mt-2 text-xs text-green-600">{llmTestMessage}</p>}
+                    <p className="mt-2 text-xs text-slate-500">
+                        {t.settingsLocalLlmUrlHelp}
+                    </p>
+                </div>
+
+                {llmProvider === 'local' && (
+                    <div className="mb-4 animate-fade-in">
+                        <label htmlFor="local-model-input" className="block text-sm font-medium text-slate-600 mb-2">{t.settingsLocalLlmModel}</label>
+                        <input
+                            id="local-model-input"
+                            type="text"
+                            value={localLlmModel}
+                            onChange={(e) => setLocalLlmModel(e.target.value)}
+                            placeholder="llama3"
+                            className="w-full p-2 bg-white border border-slate-300 focus:border-teal-500 rounded-lg focus:ring-2 focus:ring-teal-200 transition-all"
+                        />
+                         <p className="mt-2 text-xs text-slate-500">
+                            {t.settingsLocalLlmModelHelp}
+                        </p>
+                    </div>
+                )}
+
+                <div className="mb-4">
                     <label className="block text-sm font-medium text-slate-600 mb-2">{t.settingsRagProvider}</label>
                     <div className="flex space-x-1 bg-slate-100 p-1 rounded-full border border-slate-200">
                         <button 
@@ -189,7 +242,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
                     </div>
                     <p className="mt-2 text-xs text-slate-500">{t.settingsRagProviderHelp}</p>
                 </div>
+            </div>
 
+             <div className="border-t border-slate-200 pt-6">
                  <div>
                      <h3 className="text-md font-semibold text-slate-800 mb-1">{t.settingsDownloadSource}</h3>
                      <p className="mt-1 text-xs text-slate-500 mb-3">
@@ -206,7 +261,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, comfyUIU
             </div>
         </div>
 
-        <footer className="p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center">
+        <footer className="p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center flex-shrink-0">
             <span className="text-xs text-slate-500">{t.appVersion} {version}</span>
             <button
                 onClick={handleSave}

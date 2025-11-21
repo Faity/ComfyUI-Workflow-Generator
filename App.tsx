@@ -15,13 +15,13 @@ import SettingsModal from './components/SettingsModal';
 // ApiKeyModal is no longer needed as we use .env
 import { generateWorkflow, validateAndCorrectWorkflow, debugAndCorrectWorkflow } from './services/geminiService';
 import { executeWorkflow, uploadImage } from './services/comfyuiService';
-import { getServerInventory } from './services/localLlmService';
+import { getServerInventory, generateWorkflowLocal, validateAndCorrectWorkflowLocal, debugAndCorrectWorkflowLocal } from './services/localLlmService';
 import { initializeApiKey } from './services/apiKeyService';
-import type { GeneratedWorkflowResponse, HistoryEntry, ComfyUIWorkflow, SystemInventory } from './types';
+import type { GeneratedWorkflowResponse, HistoryEntry, ComfyUIWorkflow, SystemInventory, LlmProvider } from './types';
 import { useLanguage } from './context/LanguageContext';
 import { useTranslations } from './hooks/useTranslations';
 
-const version = "1.1.0";
+const version = "1.2.0";
 
 type MainView = 'generator' | 'tester' | 'history' | 'local_llm' | 'documentation';
 type ToastState = { id: string; message: string; type: 'success' | 'error' };
@@ -60,6 +60,8 @@ const App: React.FC = () => {
   const [comfyUIUrl, setComfyUIUrl] = useState<string>(() => localStorage.getItem('comfyUIUrl') || 'http://192.168.1.73:8188');
   const [localLlmApiUrl, setLocalLlmApiUrl] = useState<string>(() => localStorage.getItem('localLlmApiUrl') || '');
   const [ragProvider, setRagProvider] = useState<RagProvider>(() => (localStorage.getItem('ragProvider') as RagProvider) || 'default');
+  const [llmProvider, setLlmProvider] = useState<LlmProvider>(() => (localStorage.getItem('llmProvider') as LlmProvider) || 'gemini');
+  const [localLlmModel, setLocalLlmModel] = useState<string>(() => localStorage.getItem('localLlmModel') || 'llama3');
 
   const { language, setLanguage } = useLanguage();
   const t = useTranslations();
@@ -93,6 +95,14 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('ragProvider', ragProvider);
   }, [ragProvider]);
+
+  useEffect(() => {
+    localStorage.setItem('llmProvider', llmProvider);
+  }, [llmProvider]);
+
+  useEffect(() => {
+    localStorage.setItem('localLlmModel', localLlmModel);
+  }, [localLlmModel]);
   
   useEffect(() => {
     if (localLlmApiUrl) {
@@ -117,7 +127,8 @@ const App: React.FC = () => {
   };
 
   const ensureApiKey = (): boolean => {
-    if (!isApiKeySet) {
+    // Only check for Gemini API key if we are using Gemini provider
+    if (llmProvider === 'gemini' && !isApiKeySet) {
         showToast('System Configuration Error: VITE_API_KEY is missing from .env file.', 'error');
         return false;
     }
@@ -151,11 +162,26 @@ const App: React.FC = () => {
     try {
       // Step 1: Generation
       setLoadingState({ active: true, message: t.loadingStep1, progress: 25 });
-      const response = await generateWorkflow(prompt, localLlmApiUrl, inventory, uploadedImageName, ragProvider);
+      
+      let response;
+      if (llmProvider === 'local') {
+          if (!localLlmApiUrl) {
+              throw new Error("Local LLM API URL is missing. Please check settings.");
+          }
+          response = await generateWorkflowLocal(prompt, localLlmApiUrl, localLlmModel, inventory, uploadedImageName, ragProvider);
+      } else {
+          response = await generateWorkflow(prompt, localLlmApiUrl, inventory, uploadedImageName, ragProvider);
+      }
       
       // Step 2: Validation
       setLoadingState({ active: true, message: t.loadingStep2, progress: 75 });
-      const validatedResponse = await validateAndCorrectWorkflow(response.workflow);
+      
+      let validatedResponse;
+      if (llmProvider === 'local') {
+           validatedResponse = await validateAndCorrectWorkflowLocal(response.workflow, localLlmApiUrl, localLlmModel);
+      } else {
+           validatedResponse = await validateAndCorrectWorkflow(response.workflow);
+      }
 
       finalData = {
         workflow: validatedResponse.correctedWorkflow,
@@ -211,11 +237,22 @@ const App: React.FC = () => {
     
     try {
         let response;
-        if (errorMessage.trim()) {
-            setLoadingState({ active: true, message: t.loadingDebugging, progress: 50 });
-            response = await debugAndCorrectWorkflow(workflowToProcess, errorMessage);
+        if (llmProvider === 'local') {
+            if (!localLlmApiUrl) throw new Error("Local LLM API URL is missing.");
+            
+            if (errorMessage.trim()) {
+                setLoadingState({ active: true, message: t.loadingDebugging, progress: 50 });
+                response = await debugAndCorrectWorkflowLocal(workflowToProcess, errorMessage, localLlmApiUrl, localLlmModel);
+            } else {
+                response = await validateAndCorrectWorkflowLocal(workflowToProcess, localLlmApiUrl, localLlmModel);
+            }
         } else {
-            response = await validateAndCorrectWorkflow(workflowToProcess);
+            if (errorMessage.trim()) {
+                setLoadingState({ active: true, message: t.loadingDebugging, progress: 50 });
+                response = await debugAndCorrectWorkflow(workflowToProcess, errorMessage);
+            } else {
+                response = await validateAndCorrectWorkflow(workflowToProcess);
+            }
         }
         
         const originalEntry = history.find(h => JSON.stringify(h.data.workflow) === workflowJson);
@@ -394,6 +431,7 @@ const App: React.FC = () => {
             <div className="flex items-center">
               <h1 className="text-xl font-bold text-slate-800">{t.appTitle}</h1>
               <span className="ml-2 text-xs text-slate-500 bg-slate-200/50 px-2 py-0.5 rounded-full">v{version}</span>
+              {llmProvider === 'local' && <span className="ml-2 text-xs bg-sky-100 text-sky-800 border border-sky-200 px-2 py-0.5 rounded-full">Local LLM</span>}
             </div>
             <div className="flex items-center space-x-1 bg-slate-100/80 p-1 rounded-full border border-slate-200">
               {[
@@ -463,6 +501,10 @@ const App: React.FC = () => {
             setRagProvider={setRagProvider}
             onDownloadSourceCode={handleDownloadSourceCode}
             version={version}
+            llmProvider={llmProvider}
+            setLlmProvider={setLlmProvider}
+            localLlmModel={localLlmModel}
+            setLocalLlmModel={setLocalLlmModel}
         />
       </div>
     </>
