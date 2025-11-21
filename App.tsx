@@ -364,6 +364,7 @@ const App: React.FC = () => {
         'components/DocumentationPanel.tsx', 'components/HistoryPanel.tsx', 'components/Icons.tsx', 'components/InputPanel.tsx', 'components/Loader.tsx',
         'components/LocalLlmPanel.tsx', 'components/NodeDetailModal.tsx', 'components/OutputPanel.tsx', 'components/PromptOptimizerModal.tsx',
         'components/SettingsModal.tsx', 'components/TesterPanel.tsx', 'components/Toast.tsx', 'components/WorkflowVisualizer.tsx', 'components/WorkflowWizardModal.tsx',
+        'components/ApiKeyModal.tsx', // Included for completeness even if unused
         'public/Bedienungsanleitung.md', 'public/UserManual.md'
     ];
 
