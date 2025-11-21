@@ -26,7 +26,6 @@ const version = "1.2.0";
 type MainView = 'generator' | 'tester' | 'history' | 'local_llm' | 'documentation';
 type ToastState = { id: string; message: string; type: 'success' | 'error' };
 type LoadingState = { active: boolean; message: string; progress: number };
-export type RagProvider = 'default' | 'privateGPT';
 
 
 const App: React.FC = () => {
@@ -59,7 +58,6 @@ const App: React.FC = () => {
   // Settings
   const [comfyUIUrl, setComfyUIUrl] = useState<string>(() => localStorage.getItem('comfyUIUrl') || 'http://192.168.1.73:8188');
   const [localLlmApiUrl, setLocalLlmApiUrl] = useState<string>(() => localStorage.getItem('localLlmApiUrl') || '');
-  const [ragProvider, setRagProvider] = useState<RagProvider>(() => (localStorage.getItem('ragProvider') as RagProvider) || 'default');
   const [llmProvider, setLlmProvider] = useState<LlmProvider>(() => (localStorage.getItem('llmProvider') as LlmProvider) || 'gemini');
   const [localLlmModel, setLocalLlmModel] = useState<string>(() => localStorage.getItem('localLlmModel') || 'llama3');
 
@@ -91,10 +89,6 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('localLlmApiUrl', localLlmApiUrl);
   }, [localLlmApiUrl]);
-  
-  useEffect(() => {
-    localStorage.setItem('ragProvider', ragProvider);
-  }, [ragProvider]);
 
   useEffect(() => {
     localStorage.setItem('llmProvider', llmProvider);
@@ -168,9 +162,9 @@ const App: React.FC = () => {
           if (!localLlmApiUrl) {
               throw new Error("Local LLM API URL is missing. Please check settings.");
           }
-          response = await generateWorkflowLocal(prompt, localLlmApiUrl, localLlmModel, inventory, uploadedImageName, ragProvider);
+          response = await generateWorkflowLocal(prompt, localLlmApiUrl, localLlmModel, inventory, uploadedImageName);
       } else {
-          response = await generateWorkflow(prompt, localLlmApiUrl, inventory, uploadedImageName, ragProvider);
+          response = await generateWorkflow(prompt, localLlmApiUrl, inventory, uploadedImageName);
       }
       
       // Step 2: Validation
@@ -416,7 +410,7 @@ const App: React.FC = () => {
       case 'history':
         return <HistoryPanel history={history} selectedHistoryId={selectedHistoryId} onSelect={handleSelectHistory} onClear={() => setHistory([])} onDownload={(entry) => handleDownload(entry.data)} />;
       case 'local_llm':
-        return <LocalLlmPanel apiUrl={localLlmApiUrl} showToast={showToast} ragProvider={ragProvider} />;
+        return <LocalLlmPanel apiUrl={localLlmApiUrl} showToast={showToast} />;
       case 'documentation':
         return <DocumentationPanel />;
       default:
@@ -498,8 +492,6 @@ const App: React.FC = () => {
             setComfyUIUrl={setComfyUIUrl}
             localLlmApiUrl={localLlmApiUrl}
             setLocalLlmApiUrl={setLocalLlmApiUrl}
-            ragProvider={ragProvider}
-            setRagProvider={setRagProvider}
             onDownloadSourceCode={handleDownloadSourceCode}
             version={version}
             llmProvider={llmProvider}

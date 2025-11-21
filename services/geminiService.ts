@@ -1,7 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import type { GeneratedWorkflowResponse, ComfyUIWorkflow, ValidationResponse, DebugResponse, SystemInventory } from '../types';
 import { queryRag } from './localLlmService';
-import type { RagProvider } from "../App";
 
 const SYSTEM_INSTRUCTION_TEMPLATE = `You are an expert assistant specializing in ComfyUI, a node-based graphical user interface for Stable Diffusion.
  Your sole purpose is to generate a complete and valid ComfyUI workflow in JSON format based on a user's request.
@@ -311,7 +310,7 @@ async function callWithRetry<T>(
 }
 
 
-export const generateWorkflow = async (description: string, localLlmApiUrl: string, inventory: SystemInventory | null, imageName?: string, ragProvider: RagProvider = 'default'): Promise<Omit<GeneratedWorkflowResponse, 'validationLog'>> => {
+export const generateWorkflow = async (description: string, localLlmApiUrl: string, inventory: SystemInventory | null, imageName?: string): Promise<Omit<GeneratedWorkflowResponse, 'validationLog'>> => {
   if (!process.env.API_KEY) {
     throw new Error("API key is missing. Please set the API_KEY environment variable.");
   }
@@ -319,7 +318,7 @@ export const generateWorkflow = async (description: string, localLlmApiUrl: stri
   let ragContextBlock = '';
   if (localLlmApiUrl) {
       try {
-          const ragContext = await queryRag(description, localLlmApiUrl, ragProvider);
+          const ragContext = await queryRag(description, localLlmApiUrl);
           if (ragContext && ragContext.trim()) {
               ragContextBlock = `
 **RAG-KONTEXT:**

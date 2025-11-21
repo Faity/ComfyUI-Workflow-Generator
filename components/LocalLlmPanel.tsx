@@ -3,12 +3,10 @@ import { useDropzone } from 'react-dropzone';
 import { DatabaseIcon, ChartBarIcon, TrashIcon } from './Icons';
 import { uploadRagDocument, startFineTuning, queryRag } from '../services/localLlmService';
 import { useTranslations } from '../hooks/useTranslations';
-import type { RagProvider } from '../App';
 
 interface LocalLlmPanelProps {
   apiUrl: string;
   showToast: (message: string, type: 'success' | 'error') => void;
-  ragProvider: RagProvider;
 }
 
 type ActiveTab = 'rag' | 'finetune';
@@ -19,7 +17,7 @@ interface UploadedFile {
     message?: string;
 }
 
-const LocalLlmPanel: React.FC<LocalLlmPanelProps> = ({ apiUrl, showToast, ragProvider }) => {
+const LocalLlmPanel: React.FC<LocalLlmPanelProps> = ({ apiUrl, showToast }) => {
     const [activeTab, setActiveTab] = useState<ActiveTab>('rag');
     const [files, setFiles] = useState<UploadedFile[]>([]);
     const [trainingData, setTrainingData] = useState('');
@@ -54,7 +52,7 @@ const LocalLlmPanel: React.FC<LocalLlmPanelProps> = ({ apiUrl, showToast, ragPro
             if (files[i].status === 'pending') {
                 try {
                     setFiles(prev => prev.map((f, index) => index === i ? { ...f, status: 'uploading' } : f));
-                    const response = await uploadRagDocument(files[i].file, apiUrl, ragProvider);
+                    const response = await uploadRagDocument(files[i].file, apiUrl);
                     setFiles(prev => prev.map((f, index) => index === i ? { ...f, status: 'success', message: response.message || 'Successfully uploaded' } : f));
                     showToast(t.localLlmFileUploadSuccess(files[i].file.name), 'success');
                 } catch (e: any) {
@@ -77,7 +75,7 @@ const LocalLlmPanel: React.FC<LocalLlmPanelProps> = ({ apiUrl, showToast, ragPro
         setIsQuerying(true);
         setQueryResponse('');
         try {
-            const result = await queryRag(queryInput, apiUrl, ragProvider);
+            const result = await queryRag(queryInput, apiUrl);
             setQueryResponse(result);
         } catch (e: any) {
             showToast(e.message || 'Query failed', 'error');

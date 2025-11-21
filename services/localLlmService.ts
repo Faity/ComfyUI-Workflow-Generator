@@ -1,5 +1,4 @@
 import type { SystemInventory, GeneratedWorkflowResponse, ComfyUIWorkflow, ValidationResponse, DebugResponse } from '../types';
-import type { RagProvider } from '../App';
 
 // --- System Instructions (Mirrored from geminiService.ts to ensure consistency without circular dependencies) ---
 const SYSTEM_INSTRUCTION_TEMPLATE = `You are an expert assistant specializing in ComfyUI, a node-based graphical user interface for Stable Diffusion.
@@ -215,8 +214,7 @@ export const generateWorkflowLocal = async (
     localLlmApiUrl: string, 
     localLlmModel: string,
     inventory: SystemInventory | null, 
-    imageName?: string, 
-    ragProvider: RagProvider = 'default'
+    imageName?: string
 ): Promise<Omit<GeneratedWorkflowResponse, 'validationLog'>> => {
     if (!localLlmApiUrl) throw new Error("Local LLM API URL is not configured.");
     if (!localLlmModel) throw new Error("Local LLM Model Name is not configured.");
@@ -224,7 +222,7 @@ export const generateWorkflowLocal = async (
     // 1. RAG Context Retrieval (same logic as geminiService)
     let ragContextBlock = '';
     try {
-        const ragContext = await queryRag(description, localLlmApiUrl, ragProvider);
+        const ragContext = await queryRag(description, localLlmApiUrl);
         if (ragContext && ragContext.trim()) {
             ragContextBlock = `
 **RAG-KONTEXT:**
@@ -342,11 +340,12 @@ export const debugAndCorrectWorkflowLocal = async (
 
 // --- Existing Services (RAG, Ingest, etc.) ---
 
-export const uploadRagDocument = async (file: File, apiUrl: string, provider: RagProvider): Promise<{ message: string }> => {
+export const uploadRagDocument = async (file: File, apiUrl: string): Promise<{ message: string }> => {
     const formData = new FormData();
     formData.append('file', file);
 
-    const endpoint = new URL(provider === 'privateGPT' ? '/v1/ingest' : '/v1/rag/upload', apiUrl).toString();
+    // Uses standard Custom RAG API endpoint
+    const endpoint = new URL('/v1/rag/upload', apiUrl).toString();
 
     try {
         const response = await fetch(endpoint, {
@@ -359,15 +358,7 @@ export const uploadRagDocument = async (file: File, apiUrl: string, provider: Ra
             throw new Error(`Server error (${response.status}): ${errorData.detail}`);
         }
 
-        const responseData = await response.json();
-
-        if (provider === 'privateGPT') {
-            const count = Array.isArray(responseData.data) ? responseData.data.length : 0;
-            return { message: `Successfully ingested ${count} document(s).` };
-        }
-
-        return responseData;
-
+        return await response.json();
     } catch (error) {
         if (error instanceof TypeError) { // Network error
             throw new Error(`Failed to connect to local LLM at ${apiUrl}.`);
@@ -376,43 +367,27 @@ export const uploadRagDocument = async (file: File, apiUrl: string, provider: Ra
     }
 };
 
-export const queryRag = async (prompt: string, apiUrl: string, provider: RagProvider): Promise<string> => {
+export const queryRag = async (prompt: string, apiUrl: string): Promise<string> => {
     try {
-        if (provider === 'privateGPT') {
-            const endpoint = new URL('/v1/chat/completions', apiUrl).toString();
-            const payload = {
-                model: "local-model",
-                messages: [{ role: "user", content: prompt }],
-                use_context: true,
-                include_sources: false,
-            };
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ detail: response.statusText }));
-                throw new Error(`Server error (${response.status}): ${errorData.detail}`);
-            }
-            const responseData = await response.json();
-            return responseData.choices?.[0]?.message?.content || '';
-
-        } else { // Default provider
-            const endpoint = new URL('/v1/rag/query', apiUrl).toString();
-            const payload = { query: prompt };
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ detail: response.statusText }));
-                throw new Error(`Server error (${response.status}): ${errorData.detail}`);
-            }
-            const responseData = await response.json();
-            return responseData.response || responseData.detail || '';
+        // Uses standard Custom RAG API endpoint
+        const endpoint = new URL('/v1/rag/query', apiUrl).toString();
+        const payload = { query: prompt };
+        
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: response.statusText }));
+            throw new Error(`Server error (${response.status}): ${errorData.detail}`);
         }
+        
+        const responseData = await response.json();
+        // Expects { "response": "..." }
+        return responseData.response || responseData.detail || '';
+        
     } catch (error) {
         if (error instanceof TypeError) { // Network error
             throw new Error(`Failed to connect to local LLM at ${apiUrl}.`);
@@ -472,7 +447,7 @@ export const getServerInventory = async (apiUrl: string): Promise<SystemInventor
 export const testLocalLlmConnection = async (apiUrl: string): Promise<{ success: boolean; message: string; }> => {
     let endpoint: string;
     try {
-        // A common health check endpoint, adjust if your local server uses a different one (e.g., /docs, /healthz)
+        // A common health check endpoint
         endpoint = new URL('/health', apiUrl).toString();
     } catch (e) {
         return { success: false, message: `Invalid URL format: ${apiUrl}` };

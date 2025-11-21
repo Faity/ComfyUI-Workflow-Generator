@@ -3,7 +3,6 @@ import { useTranslations } from '../hooks/useTranslations';
 import { DownloadIcon, CheckCircleIcon, ExclamationCircleIcon } from './Icons';
 import { testComfyUIConnection } from '../services/comfyuiService';
 import { testLocalLlmConnection } from '../services/localLlmService';
-import type { RagProvider } from '../App';
 import type { LlmProvider } from '../types';
 
 
@@ -14,8 +13,6 @@ interface SettingsModalProps {
   setComfyUIUrl: (url: string) => void;
   localLlmApiUrl: string;
   setLocalLlmApiUrl: (url: string) => void;
-  ragProvider: RagProvider;
-  setRagProvider: (provider: RagProvider) => void;
   onDownloadSourceCode: () => void;
   version: string;
   llmProvider: LlmProvider;
@@ -30,7 +27,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     isOpen, onClose, 
     comfyUIUrl, setComfyUIUrl, 
     localLlmApiUrl, setLocalLlmApiUrl, 
-    ragProvider, setRagProvider, 
     onDownloadSourceCode, version,
     llmProvider, setLlmProvider,
     localLlmModel, setLocalLlmModel
@@ -223,25 +219,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         </p>
                     </div>
                 )}
-
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-slate-600 mb-2">{t.settingsRagProvider}</label>
-                    <div className="flex space-x-1 bg-slate-100 p-1 rounded-full border border-slate-200">
-                        <button 
-                            onClick={() => setRagProvider('default')}
-                            className={`w-1/2 rounded-full py-1.5 text-sm transition-colors ${ragProvider === 'default' ? 'bg-white text-teal-600 shadow-sm' : 'text-slate-500 hover:bg-white/50'}`}
-                        >
-                            {t.settingsRagProviderDefault}
-                        </button>
-                        <button 
-                            onClick={() => setRagProvider('privateGPT')}
-                            className={`w-1/2 rounded-full py-1.5 text-sm transition-colors ${ragProvider === 'privateGPT' ? 'bg-white text-teal-600 shadow-sm' : 'text-slate-500 hover:bg-white/50'}`}
-                        >
-                            {t.settingsRagProviderPrivateGpt}
-                        </button>
-                    </div>
-                    <p className="mt-2 text-xs text-slate-500">{t.settingsRagProviderHelp}</p>
-                </div>
             </div>
 
              <div className="border-t border-slate-200 pt-6">
