@@ -369,7 +369,9 @@ const App: React.FC = () => {
     const fileContents = await Promise.all(
         filePaths.map(async (path) => {
             try {
-                const response = await fetch('/' + path);
+                // Fix: Check if file is in public folder, which might be served at root
+                const fetchPath = path.startsWith('public/') ? path.replace('public/', '') : path;
+                const response = await fetch('/' + fetchPath);
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const content = await response.text();
                 return `--- START OF FILE ${path} ---\n\n${content}\n\n--- END OF FILE ${path} ---\n\n\n`;
