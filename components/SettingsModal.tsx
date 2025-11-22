@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslations } from '../hooks/useTranslations';
 import { DownloadIcon, CheckCircleIcon, ExclamationCircleIcon } from './Icons';
 import { testComfyUIConnection } from '../services/comfyuiService';
-import { testLocalLlmConnection } from '../services/localLlmService';
+import { testLocalLlmConnection, testRagConnection } from '../services/localLlmService';
 import type { LlmProvider, SystemInventory } from '../types';
 
 
@@ -86,13 +86,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleTestLocalLlm = async () => {
     setLlmTestStatus('testing');
-    // For Generation URL, we often just want to check if Ollama is up.
-    // Ollama root '/' returns "Ollama is running", but testLocalLlmConnection checks /health which might not exist on raw Ollama.
-    // Let's use a specific check for Ollama if possible, or just generic.
-    // Ideally, we should check `/api/tags` or root.
-    // For now, we reuse testLocalLlmConnection but be aware it targets /health. 
-    // NOTE: Standard Ollama does NOT have /health. 
-    // Let's try a lightweight fetch to root.
+    // For Generation URL (Ollama), we do a simple fetch to root or check /api/tags if possible.
+    // Re-using simple logic:
     try {
         const response = await fetch(localLlmApiUrl);
         if (response.ok) {
@@ -110,8 +105,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleTestRag = async () => {
     setRagTestStatus('testing');
-    // The Python server usually has /health
-    const result = await testLocalLlmConnection(ragApiUrl);
+    // We use the specialized test function for RAG which checks /v1/inventory
+    const result = await testRagConnection(ragApiUrl);
     setRagTestMessage(result.message);
     setRagTestStatus(result.success ? 'success' : 'error');
     

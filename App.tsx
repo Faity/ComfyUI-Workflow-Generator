@@ -111,7 +111,8 @@ const App: React.FC = () => {
         const inv = await getServerInventory(url);
         setInventory(inv);
       } catch (error) {
-        console.error("Failed to fetch server inventory", error);
+        // Use warn instead of error to avoid cluttering console when RAG server is offline (which is common)
+        console.warn("Could not fetch server inventory (RAG server might be offline).", error);
         setInventory(null);
       }
   }, []);
