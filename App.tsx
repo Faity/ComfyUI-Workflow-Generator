@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 // FIX: Corrected import alias for uuid v4 to match usage.
 import { v4 as uuidv4 } from 'uuid';
 import InputPanel from './components/InputPanel';
@@ -22,7 +22,7 @@ import type { GeneratedWorkflowResponse, HistoryEntry, ComfyUIWorkflow, SystemIn
 import { useLanguage } from './context/LanguageContext';
 import { useTranslations } from './hooks/useTranslations';
 
-const version = "1.3.0";
+const version = "1.3.1";
 
 type MainView = 'generator' | 'tester' | 'history' | 'local_llm' | 'documentation';
 type ToastState = { id: string; message: string; type: 'success' | 'error' };
@@ -99,22 +99,27 @@ const App: React.FC = () => {
     localStorage.setItem('localLlmModel', localLlmModel);
   }, [localLlmModel]);
   
+  const fetchInventory = useCallback(async (url: string) => {
+      if (!url) return;
+      try {
+        const inv = await getServerInventory(url);
+        setInventory(inv);
+      } catch (error) {
+        console.error("Failed to fetch server inventory", error);
+        // Only clear inventory if we really can't reach the server, 
+        // but maybe keep old data if it's a transient error? 
+        // For now, clearing it is safer to avoid stale data.
+        setInventory(null);
+      }
+  }, []);
+
   useEffect(() => {
     if (localLlmApiUrl) {
-      const fetchInventory = async () => {
-        try {
-          const inv = await getServerInventory(localLlmApiUrl);
-          setInventory(inv);
-        } catch (error) {
-          console.error("Failed to fetch server inventory", error);
-          setInventory(null);
-        }
-      };
-      fetchInventory();
+      fetchInventory(localLlmApiUrl);
     } else {
       setInventory(null);
     }
-  }, [localLlmApiUrl]);
+  }, [localLlmApiUrl, fetchInventory]);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     const id = uuidv4();
@@ -505,6 +510,7 @@ const App: React.FC = () => {
             localLlmModel={localLlmModel}
             setLocalLlmModel={setLocalLlmModel}
             inventory={inventory}
+            onRefreshInventory={() => localLlmApiUrl && fetchInventory(localLlmApiUrl)}
         />
       </div>
     </>

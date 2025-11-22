@@ -21,6 +21,7 @@ interface SettingsModalProps {
   localLlmModel: string;
   setLocalLlmModel: (model: string) => void;
   inventory: SystemInventory | null;
+  onRefreshInventory: () => void;
 }
 
 type TestStatus = 'idle' | 'testing' | 'success' | 'error';
@@ -32,7 +33,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     onDownloadSourceCode, version,
     llmProvider, setLlmProvider,
     localLlmModel, setLocalLlmModel,
-    inventory
+    inventory,
+    onRefreshInventory
 }) => {
   const t = useTranslations();
   const [comfyTestStatus, setComfyTestStatus] = useState<TestStatus>('idle');
@@ -76,6 +78,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     const result = await testLocalLlmConnection(localLlmApiUrl);
     setLlmTestMessage(result.message);
     setLlmTestStatus(result.success ? 'success' : 'error');
+    
+    if (result.success) {
+        // If test is successful, try to refresh the inventory to populate the dropdown
+        onRefreshInventory();
+    }
   }
 
   const handleSave = () => {
@@ -207,7 +214,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
 
                 <div className="mb-4 animate-fade-in">
-                    <label htmlFor="local-model-input" className="block text-sm font-medium text-slate-600 mb-2">{t.settingsLocalLlmModel}</label>
+                    <label htmlFor="local-model-select" className="block text-sm font-medium text-slate-600 mb-2">{t.settingsLocalLlmModel}</label>
                     {inventory?.llm_models && inventory.llm_models.length > 0 ? (
                         <select
                             id="local-model-select"
@@ -218,6 +225,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             {inventory.llm_models.map((model) => (
                                 <option key={model} value={model}>{model}</option>
                             ))}
+                             {/* Fallback: If the current model is not in the list (e.g. custom typed), add it to prevent empty selection */}
+                            {!inventory.llm_models.includes(localLlmModel) && localLlmModel && (
+                                <option key={localLlmModel} value={localLlmModel}>{localLlmModel} (Custom/Missing)</option>
+                            )}
                         </select>
                     ) : (
                         <input
