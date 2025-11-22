@@ -22,7 +22,7 @@ import type { GeneratedWorkflowResponse, HistoryEntry, ComfyUIWorkflow, SystemIn
 import { useLanguage } from './context/LanguageContext';
 import { useTranslations } from './hooks/useTranslations';
 
-const version = "1.3.1";
+const version = "1.3.2";
 
 type MainView = 'generator' | 'tester' | 'history' | 'local_llm' | 'documentation';
 type ToastState = { id: string; message: string; type: 'success' | 'error' };
@@ -180,7 +180,7 @@ const App: React.FC = () => {
       if (llmProvider === 'local') {
            validatedResponse = await validateAndCorrectWorkflowLocal(response.workflow, localLlmApiUrl, localLlmModel);
       } else {
-           // We pass localLlmApiUrl to allow Gemini to use the RAG via the local endpoint if available
+           // We pass localLlmApiUrl and localLlmModel to allow Gemini to use the RAG via the local endpoint if available
            validatedResponse = await validateAndCorrectWorkflow(response.workflow, localLlmApiUrl, localLlmModel);
       }
 
@@ -250,10 +250,10 @@ const App: React.FC = () => {
         } else {
             if (errorMessage.trim()) {
                 setLoadingState({ active: true, message: t.loadingDebugging, progress: 50 });
-                // Pass localLlmApiUrl for RAG usage during debugging
+                // Pass localLlmApiUrl and model for RAG usage during debugging
                 response = await debugAndCorrectWorkflow(workflowToProcess, errorMessage, localLlmApiUrl, localLlmModel);
             } else {
-                // Pass localLlmApiUrl for RAG usage during validation
+                // Pass localLlmApiUrl and model for RAG usage during validation
                 response = await validateAndCorrectWorkflow(workflowToProcess, localLlmApiUrl, localLlmModel);
             }
         }
