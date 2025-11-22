@@ -216,30 +216,34 @@ async function callLocalLlmChat(apiUrl: string, model: string, messages: Array<{
 
 export const generateWorkflowLocal = async (
     description: string, 
-    localLlmApiUrl: string, 
+    localLlmApiUrl: string, // Generation URL (Ollama)
     localLlmModel: string,
     inventory: SystemInventory | null, 
-    imageName?: string
+    imageName?: string,
+    ragApiUrl?: string // RAG/Helper URL
 ): Promise<Omit<GeneratedWorkflowResponse, 'validationLog'>> => {
-    if (!localLlmApiUrl) throw new Error("Local LLM API URL is not configured.");
+    if (!localLlmApiUrl) throw new Error("Ollama Generation URL is not configured.");
     if (!localLlmModel) throw new Error("Local LLM Model Name is not configured.");
 
-    // 1. RAG Context Retrieval
+    // 1. RAG Context Retrieval (Using ragApiUrl if available)
     let ragContextBlock = '';
-    try {
-        // Pass the selected model to the RAG query
-        const ragContext = await queryRag(description, localLlmApiUrl, localLlmModel);
-        if (ragContext && ragContext.trim()) {
-            ragContextBlock = `
+    const ragUrlToUse = ragApiUrl;
+    
+    if (ragUrlToUse) {
+        try {
+            const ragContext = await queryRag(description, ragUrlToUse, localLlmModel);
+            if (ragContext && ragContext.trim()) {
+                ragContextBlock = `
 **RAG-KONTEXT:**
 Die folgenden Informationen wurden aus einer lokalen Wissensdatenbank abgerufen, um zusätzlichen Kontext für die Anfrage des Benutzers bereitzustellen.
 \`\`\`
 ${ragContext.trim()}
 \`\`\`
 `;
+            }
+        } catch (error) {
+            console.warn("Could not query RAG endpoint for local generation, proceeding without.", error);
         }
-    } catch (error) {
-        console.warn("Could not query RAG endpoint for local generation, proceeding without.", error);
     }
 
     // 2. Image Context
@@ -268,7 +272,7 @@ ${JSON.stringify(inventory, null, 2)}
         .replace('{{IMAGE_CONTEXT_PLACEHOLDER}}', imageContextBlock)
         .replace('{{SYSTEM_INVENTORY_PLACEHOLDER}}', inventoryBlock);
 
-    // 5. Call Local LLM
+    // 5. Call Local LLM (Using Generation URL)
     try {
         const content = await callLocalLlmChat(localLlmApiUrl, localLlmModel, [
             { role: "system", content: finalSystemInstruction },
@@ -292,28 +296,32 @@ ${JSON.stringify(inventory, null, 2)}
 
 export const validateAndCorrectWorkflowLocal = async (
     workflow: ComfyUIWorkflow, 
-    localLlmApiUrl: string,
-    localLlmModel: string
+    localLlmApiUrl: string, // Generation URL (Ollama)
+    localLlmModel: string,
+    ragApiUrl?: string // RAG/Helper URL
 ): Promise<ValidationResponse> => {
-    if (!localLlmApiUrl) throw new Error("Local LLM API URL is not configured.");
+    if (!localLlmApiUrl) throw new Error("Ollama Generation URL is not configured.");
     if (!localLlmModel) throw new Error("Local LLM Model Name is not configured.");
 
     // 1. Retrieve RAG Context for Validation
     let ragContextBlock = '';
-    try {
-        // Pass the selected model to the RAG query
-        const ragContext = await queryRag("ComfyUI workflow validation rules and node compatibility common errors", localLlmApiUrl, localLlmModel);
-        if (ragContext && ragContext.trim()) {
-            ragContextBlock = `
+    const ragUrlToUse = ragApiUrl;
+    
+    if (ragUrlToUse) {
+        try {
+            const ragContext = await queryRag("ComfyUI workflow validation rules and node compatibility common errors", ragUrlToUse, localLlmModel);
+            if (ragContext && ragContext.trim()) {
+                ragContextBlock = `
 **RAG-KNOWLEDGE BASE:**
 Use the following retrieved knowledge to help validate the workflow:
 \`\`\`
 ${ragContext.trim()}
 \`\`\`
 `;
+            }
+        } catch (error) {
+            console.warn("Could not query RAG endpoint during validation (local).", error);
         }
-    } catch (error) {
-        console.warn("Could not query RAG endpoint during validation (local).", error);
     }
 
     const finalSystemInstruction = SYSTEM_INSTRUCTION_VALIDATOR.replace('{{RAG_CONTEXT_PLACEHOLDER}}', ragContextBlock);
@@ -339,28 +347,32 @@ ${ragContext.trim()}
 export const debugAndCorrectWorkflowLocal = async (
     workflow: ComfyUIWorkflow, 
     errorMessage: string,
-    localLlmApiUrl: string,
-    localLlmModel: string
+    localLlmApiUrl: string, // Generation URL (Ollama)
+    localLlmModel: string,
+    ragApiUrl?: string // RAG/Helper URL
 ): Promise<DebugResponse> => {
-    if (!localLlmApiUrl) throw new Error("Local LLM API URL is not configured.");
+    if (!localLlmApiUrl) throw new Error("Ollama Generation URL is not configured.");
     if (!localLlmModel) throw new Error("Local LLM Model Name is not configured.");
 
     // 1. Retrieve RAG Context based on Error Message
     let ragContextBlock = '';
-    try {
-        // Pass the selected model to the RAG query
-        const ragContext = await queryRag(`ComfyUI error solution: ${errorMessage}`, localLlmApiUrl, localLlmModel);
-        if (ragContext && ragContext.trim()) {
-            ragContextBlock = `
+    const ragUrlToUse = ragApiUrl;
+
+    if (ragUrlToUse) {
+        try {
+            const ragContext = await queryRag(`ComfyUI error solution: ${errorMessage}`, ragUrlToUse, localLlmModel);
+            if (ragContext && ragContext.trim()) {
+                ragContextBlock = `
 **RAG-KNOWLEDGE BASE (Relevant to Error):**
 Use the following retrieved knowledge to help fix the error:
 \`\`\`
 ${ragContext.trim()}
 \`\`\`
 `;
+            }
+        } catch (error) {
+            console.warn("Could not query RAG endpoint during debugging (local).", error);
         }
-    } catch (error) {
-        console.warn("Could not query RAG endpoint during debugging (local).", error);
     }
 
     const finalSystemInstruction = SYSTEM_INSTRUCTION_DEBUGGER.replace('{{RAG_CONTEXT_PLACEHOLDER}}', ragContextBlock);
@@ -407,7 +419,7 @@ export const uploadRagDocument = async (file: File, apiUrl: string): Promise<{ m
         return await response.json();
     } catch (error) {
         if (error instanceof TypeError) { // Network error
-            throw new Error(`Failed to connect to local LLM at ${apiUrl}.`);
+            throw new Error(`Failed to connect to RAG server at ${apiUrl}.`);
         }
         throw error;
     }
@@ -419,7 +431,7 @@ export const queryRag = async (prompt: string, apiUrl: string, model?: string): 
         const endpoint = new URL('/v1/rag/query', apiUrl).toString();
         const payload: any = { query: prompt };
         
-        // Include model in payload if provided
+        // Include model in payload if provided (the backend uses this to pick which model generates the embedding or answer)
         if (model) {
             payload.model = model;
         }
@@ -441,7 +453,7 @@ export const queryRag = async (prompt: string, apiUrl: string, model?: string): 
         
     } catch (error) {
         if (error instanceof TypeError) { // Network error
-            throw new Error(`Failed to connect to local LLM at ${apiUrl}.`);
+            throw new Error(`Failed to connect to RAG server at ${apiUrl}.`);
         }
         throw error;
     }
@@ -467,7 +479,7 @@ export const startFineTuning = async (trainingData: string, apiUrl: string): Pro
         return await response.json();
     } catch (error) {
          if (error instanceof TypeError) { // Network error
-            throw new Error(`Failed to connect to local LLM at ${apiUrl}.`);
+            throw new Error(`Failed to connect to Fine-tuning server at ${apiUrl}.`);
         }
         throw error;
     }
@@ -489,7 +501,7 @@ export const getServerInventory = async (apiUrl: string): Promise<SystemInventor
         return await response.json();
     } catch (error) {
         if (error instanceof TypeError) { // Network error
-            throw new Error(`Failed to connect to local LLM at ${apiUrl}.`);
+            throw new Error(`Failed to connect to Helper server at ${apiUrl}.`);
         }
         throw error;
     }
@@ -509,7 +521,7 @@ export const testLocalLlmConnection = async (apiUrl: string): Promise<{ success:
         
         if (response.ok) {
              const data = await response.json().catch(() => ({}));
-             return { success: true, message: data.message || 'Connection to Local LLM server successful!' };
+             return { success: true, message: data.message || 'Connection successful!' };
         }
         
         const errorText = await response.text();
@@ -519,7 +531,7 @@ export const testLocalLlmConnection = async (apiUrl: string): Promise<{ success:
         if (error instanceof TypeError) {
             return { 
                 success: false, 
-                message: `Network error. Could not connect to ${apiUrl}. Please check if the server is running, the URL is correct, and CORS is enabled.`
+                message: `Network error. Could not connect to ${apiUrl}. Please check if the server is running and CORS is enabled.`
             };
         }
         return { 

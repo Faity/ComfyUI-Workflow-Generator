@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { DatabaseIcon, ChartBarIcon, TrashIcon } from './Icons';
@@ -5,7 +6,7 @@ import { uploadRagDocument, startFineTuning, queryRag } from '../services/localL
 import { useTranslations } from '../hooks/useTranslations';
 
 interface LocalLlmPanelProps {
-  apiUrl: string;
+  apiUrl: string; // This expects the RAG/Helper URL
   showToast: (message: string, type: 'success' | 'error') => void;
 }
 
@@ -43,7 +44,7 @@ const LocalLlmPanel: React.FC<LocalLlmPanelProps> = ({ apiUrl, showToast }) => {
 
     const handleUpload = async () => {
         if (!apiUrl) {
-            showToast(t.localLlmApiUrlNotSet, 'error');
+            showToast("RAG Server URL is not configured in settings.", 'error');
             return;
         }
         
@@ -67,7 +68,7 @@ const LocalLlmPanel: React.FC<LocalLlmPanelProps> = ({ apiUrl, showToast }) => {
 
     const handleRagQuery = async () => {
         if (!apiUrl) {
-            showToast(t.localLlmApiUrlNotSet, 'error');
+            showToast("RAG Server URL is not configured in settings.", 'error');
             return;
         }
         if (!queryInput.trim()) return;
@@ -86,7 +87,7 @@ const LocalLlmPanel: React.FC<LocalLlmPanelProps> = ({ apiUrl, showToast }) => {
 
     const handleStartFineTune = async () => {
         if (!apiUrl) {
-            showToast(t.localLlmApiUrlNotSet, 'error');
+             showToast("RAG Server URL is not configured in settings.", 'error');
             return;
         }
         if (!trainingData.trim()) {

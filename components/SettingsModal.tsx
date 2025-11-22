@@ -14,6 +14,8 @@ interface SettingsModalProps {
   setComfyUIUrl: (url: string) => void;
   localLlmApiUrl: string;
   setLocalLlmApiUrl: (url: string) => void;
+  ragApiUrl: string;
+  setRagApiUrl: (url: string) => void;
   onDownloadSourceCode: () => void;
   version: string;
   llmProvider: LlmProvider;
@@ -30,6 +32,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     isOpen, onClose, 
     comfyUIUrl, setComfyUIUrl, 
     localLlmApiUrl, setLocalLlmApiUrl, 
+    ragApiUrl, setRagApiUrl,
     onDownloadSourceCode, version,
     llmProvider, setLlmProvider,
     localLlmModel, setLocalLlmModel,
@@ -41,8 +44,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [comfyTestMessage, setComfyTestMessage] = useState<string>('');
   const [isCorsError, setIsCorsError] = useState<boolean>(false);
   const [isMixedContentError, setIsMixedContentError] = useState<boolean>(false);
+  
   const [llmTestStatus, setLlmTestStatus] = useState<TestStatus>('idle');
   const [llmTestMessage, setLlmTestMessage] = useState<string>('');
+  
+  const [ragTestStatus, setRagTestStatus] = useState<TestStatus>('idle');
+  const [ragTestMessage, setRagTestMessage] = useState<string>('');
 
 
   useEffect(() => {
@@ -54,6 +61,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   useEffect(() => {
     setLlmTestStatus('idle');
   }, [localLlmApiUrl]);
+
+  useEffect(() => {
+    setRagTestStatus('idle');
+  }, [ragApiUrl]);
 
 
   if (!isOpen) return null;
@@ -75,12 +86,36 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleTestLocalLlm = async () => {
     setLlmTestStatus('testing');
-    const result = await testLocalLlmConnection(localLlmApiUrl);
-    setLlmTestMessage(result.message);
-    setLlmTestStatus(result.success ? 'success' : 'error');
+    // For Generation URL, we often just want to check if Ollama is up.
+    // Ollama root '/' returns "Ollama is running", but testLocalLlmConnection checks /health which might not exist on raw Ollama.
+    // Let's use a specific check for Ollama if possible, or just generic.
+    // Ideally, we should check `/api/tags` or root.
+    // For now, we reuse testLocalLlmConnection but be aware it targets /health. 
+    // NOTE: Standard Ollama does NOT have /health. 
+    // Let's try a lightweight fetch to root.
+    try {
+        const response = await fetch(localLlmApiUrl);
+        if (response.ok) {
+            setLlmTestStatus('success');
+            setLlmTestMessage('Ollama is reachable!');
+        } else {
+            setLlmTestStatus('error');
+            setLlmTestMessage(`Status: ${response.status}`);
+        }
+    } catch (e: any) {
+         setLlmTestStatus('error');
+         setLlmTestMessage('Connection failed.');
+    }
+  }
+
+  const handleTestRag = async () => {
+    setRagTestStatus('testing');
+    // The Python server usually has /health
+    const result = await testLocalLlmConnection(ragApiUrl);
+    setRagTestMessage(result.message);
+    setRagTestStatus(result.success ? 'success' : 'error');
     
     if (result.success) {
-        // If test is successful, try to refresh the inventory to populate the dropdown
         onRefreshInventory();
     }
   }
@@ -191,7 +226,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
 
                 <div className="mb-4">
-                    <label htmlFor="local-llm-url-input" className="block text-sm font-medium text-slate-600 mb-2">{t.settingsLocalLlmUrl}</label>
+                    <label htmlFor="local-llm-url-input" className="block text-sm font-medium text-slate-600 mb-2">Ollama Generation URL</label>
                      <div className="flex items-center space-x-2">
                         <input
                             id="local-llm-url-input"
@@ -209,7 +244,30 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     {llmTestStatus === 'error' && <p className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded-md">{llmTestMessage}</p>}
                     {llmTestStatus === 'success' && <p className="mt-2 text-xs text-green-600">{llmTestMessage}</p>}
                     <p className="mt-2 text-xs text-slate-500">
-                        {t.settingsLocalLlmUrlHelp}
+                        Standard Ollama URL (e.g. http://127.0.0.1:11434). Used for generating workflows.
+                    </p>
+                </div>
+
+                <div className="mb-4">
+                    <label htmlFor="rag-url-input" className="block text-sm font-medium text-slate-600 mb-2">RAG / Helper API URL</label>
+                     <div className="flex items-center space-x-2">
+                        <input
+                            id="rag-url-input"
+                            type="text"
+                            value={ragApiUrl}
+                            onChange={(e) => setRagApiUrl(e.target.value)}
+                            placeholder="http://127.0.0.1:8000"
+                            className="w-full p-2 bg-white border border-slate-300 focus:border-teal-500 rounded-lg focus:ring-2 focus:ring-teal-200 transition-all"
+                        />
+                        <div className="w-5 h-5 flex-shrink-0">{renderTestStatus(ragTestStatus, ragTestMessage)}</div>
+                        <button onClick={handleTestRag} disabled={ragTestStatus === 'testing'} className="px-4 py-2 text-sm bg-sky-500 text-white rounded-lg hover:bg-sky-600 disabled:opacity-50 transition-colors whitespace-nowrap shadow-sm">
+                            {t.settingsTestConnection}
+                        </button>
+                    </div>
+                    {ragTestStatus === 'error' && <p className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded-md">{ragTestMessage}</p>}
+                    {ragTestStatus === 'success' && <p className="mt-2 text-xs text-green-600">{ragTestMessage}</p>}
+                    <p className="mt-2 text-xs text-slate-500">
+                        Python Server URL (e.g. http://127.0.0.1:8000). Used for Inventory, RAG, and Fine-Tuning.
                     </p>
                 </div>
 
@@ -225,7 +283,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             {inventory.llm_models.map((model) => (
                                 <option key={model} value={model}>{model}</option>
                             ))}
-                             {/* Fallback: If the current model is not in the list (e.g. custom typed), add it to prevent empty selection */}
                             {!inventory.llm_models.includes(localLlmModel) && localLlmModel && (
                                 <option key={localLlmModel} value={localLlmModel}>{localLlmModel} (Custom/Missing)</option>
                             )}

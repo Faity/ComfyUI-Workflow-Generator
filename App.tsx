@@ -22,7 +22,7 @@ import type { GeneratedWorkflowResponse, HistoryEntry, ComfyUIWorkflow, SystemIn
 import { useLanguage } from './context/LanguageContext';
 import { useTranslations } from './hooks/useTranslations';
 
-const version = "1.3.2";
+const version = "1.3.3";
 
 type MainView = 'generator' | 'tester' | 'history' | 'local_llm' | 'documentation';
 type ToastState = { id: string; message: string; type: 'success' | 'error' };
@@ -57,8 +57,9 @@ const App: React.FC = () => {
   const [inventory, setInventory] = useState<SystemInventory | null>(null);
 
   // Settings
-  const [comfyUIUrl, setComfyUIUrl] = useState<string>(() => localStorage.getItem('comfyUIUrl') || 'http://192.168.1.73:8188');
-  const [localLlmApiUrl, setLocalLlmApiUrl] = useState<string>(() => localStorage.getItem('localLlmApiUrl') || '');
+  const [comfyUIUrl, setComfyUIUrl] = useState<string>(() => localStorage.getItem('comfyUIUrl') || 'http://127.0.0.1:8188');
+  const [localLlmApiUrl, setLocalLlmApiUrl] = useState<string>(() => localStorage.getItem('localLlmApiUrl') || 'http://127.0.0.1:11434');
+  const [ragApiUrl, setRagApiUrl] = useState<string>(() => localStorage.getItem('ragApiUrl') || 'http://127.0.0.1:8000');
   const [llmProvider, setLlmProvider] = useState<LlmProvider>(() => (localStorage.getItem('llmProvider') as LlmProvider) || 'gemini');
   const [localLlmModel, setLocalLlmModel] = useState<string>(() => localStorage.getItem('localLlmModel') || 'llama3.1:latest');
 
@@ -90,6 +91,10 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('localLlmApiUrl', localLlmApiUrl);
   }, [localLlmApiUrl]);
+  
+  useEffect(() => {
+    localStorage.setItem('ragApiUrl', ragApiUrl);
+  }, [ragApiUrl]);
 
   useEffect(() => {
     localStorage.setItem('llmProvider', llmProvider);
@@ -99,6 +104,7 @@ const App: React.FC = () => {
     localStorage.setItem('localLlmModel', localLlmModel);
   }, [localLlmModel]);
   
+  // Inventory fetching should use the RAG/Helper URL primarily, as that's where the python script lives.
   const fetchInventory = useCallback(async (url: string) => {
       if (!url) return;
       try {
@@ -106,20 +112,23 @@ const App: React.FC = () => {
         setInventory(inv);
       } catch (error) {
         console.error("Failed to fetch server inventory", error);
-        // Only clear inventory if we really can't reach the server, 
-        // but maybe keep old data if it's a transient error? 
-        // For now, clearing it is safer to avoid stale data.
         setInventory(null);
       }
   }, []);
 
+  // Refresh inventory when RAG URL changes
   useEffect(() => {
-    if (localLlmApiUrl) {
-      fetchInventory(localLlmApiUrl);
+    if (ragApiUrl) {
+      fetchInventory(ragApiUrl);
     } else {
       setInventory(null);
     }
-  }, [localLlmApiUrl, fetchInventory]);
+  }, [ragApiUrl, fetchInventory]);
+  
+  // Also expose a manual refresh for the Settings modal
+  const refreshInventory = () => {
+      if (ragApiUrl) fetchInventory(ragApiUrl);
+  };
 
   const showToast = (message: string, type: 'success' | 'error') => {
     const id = uuidv4();
@@ -166,11 +175,13 @@ const App: React.FC = () => {
       let response;
       if (llmProvider === 'local') {
           if (!localLlmApiUrl) {
-              throw new Error("Local LLM API URL is missing. Please check settings.");
+              throw new Error("Ollama Generation URL is missing. Please check settings.");
           }
-          response = await generateWorkflowLocal(prompt, localLlmApiUrl, localLlmModel, inventory, uploadedImageName);
+          // We pass both URLs: one for generation (Ollama), one for RAG (Python Helper)
+          response = await generateWorkflowLocal(prompt, localLlmApiUrl, localLlmModel, inventory, uploadedImageName, ragApiUrl);
       } else {
-          response = await generateWorkflow(prompt, localLlmApiUrl, inventory, uploadedImageName, localLlmModel);
+          // For Gemini, we pass the RAG URL if available for context retrieval
+          response = await generateWorkflow(prompt, ragApiUrl || localLlmApiUrl, inventory, uploadedImageName, localLlmModel);
       }
       
       // Step 2: Validation
@@ -178,10 +189,10 @@ const App: React.FC = () => {
       
       let validatedResponse;
       if (llmProvider === 'local') {
-           validatedResponse = await validateAndCorrectWorkflowLocal(response.workflow, localLlmApiUrl, localLlmModel);
+           validatedResponse = await validateAndCorrectWorkflowLocal(response.workflow, localLlmApiUrl, localLlmModel, ragApiUrl);
       } else {
-           // We pass localLlmApiUrl and localLlmModel to allow Gemini to use the RAG via the local endpoint if available
-           validatedResponse = await validateAndCorrectWorkflow(response.workflow, localLlmApiUrl, localLlmModel);
+           // Pass ragApiUrl for context lookup
+           validatedResponse = await validateAndCorrectWorkflow(response.workflow, ragApiUrl || localLlmApiUrl, localLlmModel);
       }
 
       finalData = {
@@ -238,23 +249,23 @@ const App: React.FC = () => {
     
     try {
         let response;
+        const ragUrlToUse = ragApiUrl || localLlmApiUrl;
+
         if (llmProvider === 'local') {
-            if (!localLlmApiUrl) throw new Error("Local LLM API URL is missing.");
+            if (!localLlmApiUrl) throw new Error("Ollama API URL is missing.");
             
             if (errorMessage.trim()) {
                 setLoadingState({ active: true, message: t.loadingDebugging, progress: 50 });
-                response = await debugAndCorrectWorkflowLocal(workflowToProcess, errorMessage, localLlmApiUrl, localLlmModel);
+                response = await debugAndCorrectWorkflowLocal(workflowToProcess, errorMessage, localLlmApiUrl, localLlmModel, ragUrlToUse);
             } else {
-                response = await validateAndCorrectWorkflowLocal(workflowToProcess, localLlmApiUrl, localLlmModel);
+                response = await validateAndCorrectWorkflowLocal(workflowToProcess, localLlmApiUrl, localLlmModel, ragUrlToUse);
             }
         } else {
             if (errorMessage.trim()) {
                 setLoadingState({ active: true, message: t.loadingDebugging, progress: 50 });
-                // Pass localLlmApiUrl and model for RAG usage during debugging
-                response = await debugAndCorrectWorkflow(workflowToProcess, errorMessage, localLlmApiUrl, localLlmModel);
+                response = await debugAndCorrectWorkflow(workflowToProcess, errorMessage, ragUrlToUse, localLlmModel);
             } else {
-                // Pass localLlmApiUrl and model for RAG usage during validation
-                response = await validateAndCorrectWorkflow(workflowToProcess, localLlmApiUrl, localLlmModel);
+                response = await validateAndCorrectWorkflow(workflowToProcess, ragUrlToUse, localLlmModel);
             }
         }
         
@@ -367,14 +378,13 @@ const App: React.FC = () => {
         'components/DocumentationPanel.tsx', 'components/HistoryPanel.tsx', 'components/Icons.tsx', 'components/InputPanel.tsx', 'components/Loader.tsx',
         'components/LocalLlmPanel.tsx', 'components/NodeDetailModal.tsx', 'components/OutputPanel.tsx', 'components/PromptOptimizerModal.tsx',
         'components/SettingsModal.tsx', 'components/TesterPanel.tsx', 'components/Toast.tsx', 'components/WorkflowVisualizer.tsx', 'components/WorkflowWizardModal.tsx',
-        'components/ApiKeyModal.tsx', // Included for completeness even if unused
+        'components/ApiKeyModal.tsx',
         'public/Bedienungsanleitung.md', 'public/UserManual.md'
     ];
 
     const fileContents = await Promise.all(
         filePaths.map(async (path) => {
             try {
-                // Fix: Check if file is in public folder, which might be served at root
                 const fetchPath = path.startsWith('public/') ? path.replace('public/', '') : path;
                 const response = await fetch('/' + fetchPath);
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -421,7 +431,7 @@ const App: React.FC = () => {
       case 'history':
         return <HistoryPanel history={history} selectedHistoryId={selectedHistoryId} onSelect={handleSelectHistory} onClear={() => setHistory([])} onDownload={(entry) => handleDownload(entry.data)} />;
       case 'local_llm':
-        return <LocalLlmPanel apiUrl={localLlmApiUrl} showToast={showToast} />;
+        return <LocalLlmPanel apiUrl={ragApiUrl} showToast={showToast} />;
       case 'documentation':
         return <DocumentationPanel />;
       default:
@@ -503,6 +513,8 @@ const App: React.FC = () => {
             setComfyUIUrl={setComfyUIUrl}
             localLlmApiUrl={localLlmApiUrl}
             setLocalLlmApiUrl={setLocalLlmApiUrl}
+            ragApiUrl={ragApiUrl}
+            setRagApiUrl={setRagApiUrl}
             onDownloadSourceCode={handleDownloadSourceCode}
             version={version}
             llmProvider={llmProvider}
@@ -510,7 +522,7 @@ const App: React.FC = () => {
             localLlmModel={localLlmModel}
             setLocalLlmModel={setLocalLlmModel}
             inventory={inventory}
-            onRefreshInventory={() => localLlmApiUrl && fetchInventory(localLlmApiUrl)}
+            onRefreshInventory={refreshInventory}
         />
       </div>
     </>
