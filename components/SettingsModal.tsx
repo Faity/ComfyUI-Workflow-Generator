@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { useTranslations } from '../hooks/useTranslations';
 import { DownloadIcon, CheckCircleIcon, ExclamationCircleIcon } from './Icons';
 import { testComfyUIConnection } from '../services/comfyuiService';
 import { testLocalLlmConnection } from '../services/localLlmService';
-import type { LlmProvider } from '../types';
+import type { LlmProvider, SystemInventory } from '../types';
 
 
 interface SettingsModalProps {
@@ -19,6 +20,7 @@ interface SettingsModalProps {
   setLlmProvider: (provider: LlmProvider) => void;
   localLlmModel: string;
   setLocalLlmModel: (model: string) => void;
+  inventory: SystemInventory | null;
 }
 
 type TestStatus = 'idle' | 'testing' | 'success' | 'error';
@@ -29,7 +31,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     localLlmApiUrl, setLocalLlmApiUrl, 
     onDownloadSourceCode, version,
     llmProvider, setLlmProvider,
-    localLlmModel, setLocalLlmModel
+    localLlmModel, setLocalLlmModel,
+    inventory
 }) => {
   const t = useTranslations();
   const [comfyTestStatus, setComfyTestStatus] = useState<TestStatus>('idle');
@@ -203,22 +206,33 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     </p>
                 </div>
 
-                {llmProvider === 'local' && (
-                    <div className="mb-4 animate-fade-in">
-                        <label htmlFor="local-model-input" className="block text-sm font-medium text-slate-600 mb-2">{t.settingsLocalLlmModel}</label>
+                <div className="mb-4 animate-fade-in">
+                    <label htmlFor="local-model-input" className="block text-sm font-medium text-slate-600 mb-2">{t.settingsLocalLlmModel}</label>
+                    {inventory?.llm_models && inventory.llm_models.length > 0 ? (
+                        <select
+                            id="local-model-select"
+                            value={localLlmModel}
+                            onChange={(e) => setLocalLlmModel(e.target.value)}
+                            className="w-full p-2 bg-white border border-slate-300 focus:border-teal-500 rounded-lg focus:ring-2 focus:ring-teal-200 transition-all"
+                        >
+                            {inventory.llm_models.map((model) => (
+                                <option key={model} value={model}>{model}</option>
+                            ))}
+                        </select>
+                    ) : (
                         <input
                             id="local-model-input"
                             type="text"
                             value={localLlmModel}
                             onChange={(e) => setLocalLlmModel(e.target.value)}
-                            placeholder="llama3"
+                            placeholder="llama3.1:latest"
                             className="w-full p-2 bg-white border border-slate-300 focus:border-teal-500 rounded-lg focus:ring-2 focus:ring-teal-200 transition-all"
                         />
-                         <p className="mt-2 text-xs text-slate-500">
-                            {t.settingsLocalLlmModelHelp}
-                        </p>
-                    </div>
-                )}
+                    )}
+                     <p className="mt-2 text-xs text-slate-500">
+                        {t.settingsLocalLlmModelHelp}
+                    </p>
+                </div>
             </div>
 
              <div className="border-t border-slate-200 pt-6">

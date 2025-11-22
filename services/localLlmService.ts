@@ -1,3 +1,4 @@
+
 import type { SystemInventory, GeneratedWorkflowResponse, ComfyUIWorkflow, ValidationResponse, DebugResponse } from '../types';
 
 // --- System Instructions (Mirrored from geminiService.ts to ensure consistency without circular dependencies) ---
@@ -226,7 +227,8 @@ export const generateWorkflowLocal = async (
     // 1. RAG Context Retrieval
     let ragContextBlock = '';
     try {
-        const ragContext = await queryRag(description, localLlmApiUrl);
+        // Pass the selected model to the RAG query
+        const ragContext = await queryRag(description, localLlmApiUrl, localLlmModel);
         if (ragContext && ragContext.trim()) {
             ragContextBlock = `
 **RAG-KONTEXT:**
@@ -299,7 +301,8 @@ export const validateAndCorrectWorkflowLocal = async (
     // 1. Retrieve RAG Context for Validation
     let ragContextBlock = '';
     try {
-        const ragContext = await queryRag("ComfyUI workflow validation rules and node compatibility common errors", localLlmApiUrl);
+        // Pass the selected model to the RAG query
+        const ragContext = await queryRag("ComfyUI workflow validation rules and node compatibility common errors", localLlmApiUrl, localLlmModel);
         if (ragContext && ragContext.trim()) {
             ragContextBlock = `
 **RAG-KNOWLEDGE BASE:**
@@ -345,7 +348,8 @@ export const debugAndCorrectWorkflowLocal = async (
     // 1. Retrieve RAG Context based on Error Message
     let ragContextBlock = '';
     try {
-        const ragContext = await queryRag(`ComfyUI error solution: ${errorMessage}`, localLlmApiUrl);
+        // Pass the selected model to the RAG query
+        const ragContext = await queryRag(`ComfyUI error solution: ${errorMessage}`, localLlmApiUrl, localLlmModel);
         if (ragContext && ragContext.trim()) {
             ragContextBlock = `
 **RAG-KNOWLEDGE BASE (Relevant to Error):**
@@ -409,11 +413,16 @@ export const uploadRagDocument = async (file: File, apiUrl: string): Promise<{ m
     }
 };
 
-export const queryRag = async (prompt: string, apiUrl: string): Promise<string> => {
+export const queryRag = async (prompt: string, apiUrl: string, model?: string): Promise<string> => {
     try {
         // Uses standard Custom RAG API endpoint
         const endpoint = new URL('/v1/rag/query', apiUrl).toString();
-        const payload = { query: prompt };
+        const payload: any = { query: prompt };
+        
+        // Include model in payload if provided
+        if (model) {
+            payload.model = model;
+        }
         
         const response = await fetch(endpoint, {
             method: 'POST',

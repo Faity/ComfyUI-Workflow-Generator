@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 // FIX: Corrected import alias for uuid v4 to match usage.
 import { v4 as uuidv4 } from 'uuid';
@@ -59,7 +60,7 @@ const App: React.FC = () => {
   const [comfyUIUrl, setComfyUIUrl] = useState<string>(() => localStorage.getItem('comfyUIUrl') || 'http://192.168.1.73:8188');
   const [localLlmApiUrl, setLocalLlmApiUrl] = useState<string>(() => localStorage.getItem('localLlmApiUrl') || '');
   const [llmProvider, setLlmProvider] = useState<LlmProvider>(() => (localStorage.getItem('llmProvider') as LlmProvider) || 'gemini');
-  const [localLlmModel, setLocalLlmModel] = useState<string>(() => localStorage.getItem('localLlmModel') || 'llama3');
+  const [localLlmModel, setLocalLlmModel] = useState<string>(() => localStorage.getItem('localLlmModel') || 'llama3.1:latest');
 
   const { language, setLanguage } = useLanguage();
   const t = useTranslations();
@@ -164,7 +165,7 @@ const App: React.FC = () => {
           }
           response = await generateWorkflowLocal(prompt, localLlmApiUrl, localLlmModel, inventory, uploadedImageName);
       } else {
-          response = await generateWorkflow(prompt, localLlmApiUrl, inventory, uploadedImageName);
+          response = await generateWorkflow(prompt, localLlmApiUrl, inventory, uploadedImageName, localLlmModel);
       }
       
       // Step 2: Validation
@@ -175,7 +176,7 @@ const App: React.FC = () => {
            validatedResponse = await validateAndCorrectWorkflowLocal(response.workflow, localLlmApiUrl, localLlmModel);
       } else {
            // We pass localLlmApiUrl to allow Gemini to use the RAG via the local endpoint if available
-           validatedResponse = await validateAndCorrectWorkflow(response.workflow, localLlmApiUrl);
+           validatedResponse = await validateAndCorrectWorkflow(response.workflow, localLlmApiUrl, localLlmModel);
       }
 
       finalData = {
@@ -245,10 +246,10 @@ const App: React.FC = () => {
             if (errorMessage.trim()) {
                 setLoadingState({ active: true, message: t.loadingDebugging, progress: 50 });
                 // Pass localLlmApiUrl for RAG usage during debugging
-                response = await debugAndCorrectWorkflow(workflowToProcess, errorMessage, localLlmApiUrl);
+                response = await debugAndCorrectWorkflow(workflowToProcess, errorMessage, localLlmApiUrl, localLlmModel);
             } else {
                 // Pass localLlmApiUrl for RAG usage during validation
-                response = await validateAndCorrectWorkflow(workflowToProcess, localLlmApiUrl);
+                response = await validateAndCorrectWorkflow(workflowToProcess, localLlmApiUrl, localLlmModel);
             }
         }
         
@@ -501,6 +502,7 @@ const App: React.FC = () => {
             setLlmProvider={setLlmProvider}
             localLlmModel={localLlmModel}
             setLocalLlmModel={setLocalLlmModel}
+            inventory={inventory}
         />
       </div>
     </>

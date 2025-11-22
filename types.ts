@@ -1,3 +1,4 @@
+
 export interface ComfyUINode {
   id: number;
   type: string;
@@ -85,6 +86,7 @@ export interface SystemInventory {
   loras?: string[];
   vaes?: string[];
   controlnet?: string[];
+  llm_models?: string[];
   [key: string]: string[] | undefined;
 }
 
