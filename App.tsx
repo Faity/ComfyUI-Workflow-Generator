@@ -22,7 +22,7 @@ import type { GeneratedWorkflowResponse, HistoryEntry, ComfyUIWorkflow, SystemIn
 import { useLanguage } from './context/LanguageContext';
 import { useTranslations } from './hooks/useTranslations';
 
-const version = "1.3.4";
+const version = "1.3.5";
 
 type MainView = 'generator' | 'tester' | 'history' | 'local_llm' | 'documentation';
 type ToastState = { id: string; message: string; type: 'success' | 'error' };
@@ -434,7 +434,7 @@ const App: React.FC = () => {
       case 'history':
         return <HistoryPanel history={history} selectedHistoryId={selectedHistoryId} onSelect={handleSelectHistory} onClear={() => setHistory([])} onDownload={(entry) => handleDownload(entry.data)} />;
       case 'local_llm':
-        return <LocalLlmPanel apiUrl={ragApiUrl} showToast={showToast} />;
+        return <LocalLlmPanel apiUrl={ragApiUrl} showToast={showToast} selectedModel={localLlmModel} />;
       case 'documentation':
         return <DocumentationPanel />;
       default:

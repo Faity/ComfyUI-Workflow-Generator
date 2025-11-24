@@ -8,17 +8,18 @@ import { useTranslations } from '../hooks/useTranslations';
 interface LocalLlmPanelProps {
   apiUrl: string; // This expects the RAG/Helper URL
   showToast: (message: string, type: 'success' | 'error') => void;
+  selectedModel: string; // <--- NEU: Wir müssen wissen, welches Modell aktiv ist
 }
 
 type ActiveTab = 'rag' | 'finetune';
 
 interface UploadedFile {
-    file: File;
-    status: 'pending' | 'uploading' | 'success' | 'error';
-    message?: string;
+  file: File;
+  status: 'pending' | 'uploading' | 'success' | 'error';
+  message?: string;
 }
 
-const LocalLlmPanel: React.FC<LocalLlmPanelProps> = ({ apiUrl, showToast }) => {
+const LocalLlmPanel: React.FC<LocalLlmPanelProps> = ({ apiUrl, showToast, selectedModel }) => {
     const [activeTab, setActiveTab] = useState<ActiveTab>('rag');
     const [files, setFiles] = useState<UploadedFile[]>([]);
     const [trainingData, setTrainingData] = useState('');
@@ -76,7 +77,9 @@ const LocalLlmPanel: React.FC<LocalLlmPanelProps> = ({ apiUrl, showToast }) => {
         setIsQuerying(true);
         setQueryResponse('');
         try {
-            const result = await queryRag(queryInput, apiUrl);
+            // HIER IST DER FIX: Wir übergeben das selectedModel!
+            // Signatur: queryRag(prompt, apiUrl, model)
+            const result = await queryRag(queryInput, apiUrl, selectedModel);
             setQueryResponse(result);
         } catch (e: any) {
             showToast(e.message || 'Query failed', 'error');
@@ -116,7 +119,14 @@ const LocalLlmPanel: React.FC<LocalLlmPanelProps> = ({ apiUrl, showToast }) => {
 
     return (
         <div className="w-full lg:w-1/2 glass-panel rounded-2xl p-8 flex flex-col space-y-6">
-            <h2 className="text-2xl font-bold text-slate-800">{t.localLlmTitle}</h2>
+            <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-slate-800">{t.localLlmTitle}</h2>
+                {/* Anzeige welches Modell gerade aktiv ist */}
+                <span className="text-xs px-2 py-1 bg-teal-100 text-teal-800 rounded-md border border-teal-200">
+                    Modell: {selectedModel || 'Standard'}
+                </span>
+            </div>
+
             <div className="flex space-x-1 bg-slate-100 p-1 rounded-full border border-slate-200">
                 <button onClick={() => setActiveTab('rag')} className={`w-1/2 px-4 py-2 text-sm font-medium rounded-full flex items-center justify-center transition-colors ${activeTab === 'rag' ? 'bg-white text-teal-600 shadow-sm' : 'text-slate-500 hover:bg-white/50'}`}>
                     <DatabaseIcon className="w-5 h-5 mr-2" /> {t.localLlmRagTab}
