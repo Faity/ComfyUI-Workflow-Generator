@@ -109,6 +109,11 @@ ${JSON.stringify(inventory, null, 2)}
     .replace('{{IMAGE_CONTEXT_PLACEHOLDER}}', imageContextBlock)
     .replace('{{SYSTEM_INVENTORY_PLACEHOLDER}}', inventoryBlock);
 
+  console.log("=== DEBUG: RAG CONTEXT BLOCK ===");
+  console.log(ragContextBlock);
+  console.log("=== DEBUG: INVENTORY BLOCK ===");
+  console.log(inventoryBlock);
+  console.log("================================");
 
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
