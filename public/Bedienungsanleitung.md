@@ -1,193 +1,127 @@
 # Bedienungsanleitung: AI ComfyUI Workflow Suite
 
-Herzlich willkommen zur AI ComfyUI Workflow Suite! Dieses Tool wurde entwickelt, um Ihnen die Erstellung, Validierung und Korrektur von ComfyUI-Workflows so einfach wie möglich zu machen. Egal, ob Sie ein Anfänger oder ein erfahrener ComfyUI-Nutzer sind, diese Suite hilft Ihnen, Ihre Ideen schnell in funktionierende Workflows umzusetzen.
+Herzlich willkommen zur AI ComfyUI Workflow Suite! Dieses Tool ist Ihr intelligenter Assistent für die Erstellung, Validierung und Optimierung von ComfyUI-Workflows.
+
+Diese Dokumentation führt Sie durch die Funktionen der Anwendung, vom ersten Prompt bis zum automatisierten Lernen aus Erfolgen.
 
 ## Inhaltsverzeichnis
-1.  [Übersicht der Benutzeroberfläche](#übersicht-der-benutzeroberfläche)
-2.  [Der "Generator"-Tab](#der-generator-tab-workflows-erstellen)
-3.  [Der "Tester"-Tab](#der-tester-tab-workflows-prüfen-und-reparieren)
-4.  [Der "Verlauf"-Tab](#der-verlauf-tab-frühere-arbeiten-verwalten)
-5.  [Der "Lokales LLM"-Tab](#der-lokales-llm-tab-lokales-llm-verwalten)
-6.  [Das Ausgabefenster im Detail](#das-ausgabefenster-im-detail)
-7.  [Einstellungen](#einstellungen)
-8.  [Tipps für beste Ergebnisse](#tipps-für-beste-ergebnisse)
-9.  [Qualität & Technische Details](#qualität--technische-details)
-10. [Fehlerbehebung](#fehlerbehebung)
+
+1.  [Schritt 1: Workflows Generieren](#schritt-1-workflows-generieren)
+    *   [Prompting & Assistenten](#prompting--assistenten)
+    *   [Format-Wahl: Graph vs. API](#format-wahl-graph-vs-api)
+    *   [Bilder hochladen](#bilder-hochladen)
+2.  [Schritt 2: Ergebnisse & Ausführung](#schritt-2-ergebnisse--ausführung)
+    *   [Das neue Output-Panel](#das-neue-output-panel)
+    *   [Workflow ausführen (Run)](#workflow-ausführen-run)
+3.  [Schritt 3: Der Feedback-Loop (Lernen)](#schritt-3-der-feedback-loop-lernen)
+4.  [Der "Tester"-Tab: Reparatur & Validierung](#der-tester-tab-reparatur--validierung)
+5.  [Fortgeschrittene Funktionen](#fortgeschrittene-funktionen)
+    *   [Lokales LLM (RAG & Fine-Tuning)](#lokales-llm-rag--fine-tuning)
+    *   [Verlauf](#verlauf)
+6.  [Einstellungen & Installation](#einstellungen--installation)
+7.  [Fehlerbehebung](#fehlerbehebung)
 
 ---
 
-## Übersicht der Benutzeroberfläche
+## Schritt 1: Workflows Generieren
 
-Die Anwendung ist in einige Hauptbereiche unterteilt:
+Der **Generator-Tab** ist Ihr Startpunkt. Hier übersetzen Sie Ihre Ideen in technische ComfyUI-Strukturen.
 
--   **Header:** Zeigt den Namen der Anwendung an. Oben rechts finden Sie ein Zahnrad-Symbol (`⚙️`) für die **Einstellungen** und einen Schalter, um die Sprache zwischen Deutsch und Englisch zu wechseln.
--   **Tab-Leiste:** Hier können Sie zwischen den verschiedenen Funktionen wechseln: `Generator`, `Tester`, `Verlauf`, `Lokales LLM` und `Dokumentation`.
--   **Hauptfenster:** Dieses ist zweigeteilt. Die linke Hälfte ändert sich je nach gewähltem Tab (Eingabebereich), während die rechte Hälfte immer das **Ausgabefenster** ist, in dem die Ergebnisse angezeigt werden.
+### Prompting & Assistenten
+Geben Sie Ihre Idee in das Textfeld ein. Je präziser, desto besser.
+*   **Prompt-Assistent (`✨`):** Startet einen Chat, um Ihre künstlerische Vision zu verfeinern (Stil, Beleuchtung, Komposition).
+*   **Workflow-Assistent (`🧠`):** Startet einen technischen Dialog, um spezifische Parameter (Modell, Sampler, Scheduler) abzufragen.
 
----
+### Format-Wahl: Graph vs. API
+Sie können nun wählen, in welchem Format der Workflow erstellt werden soll:
 
-## Der "Generator"-Tab: Workflows erstellen
+1.  **Graph (Visuell):** Das Standardformat für die ComfyUI-Benutzeroberfläche (`.json`). Enthält Positionsdaten für Nodes und Links. Wählen Sie dies, wenn Sie den Workflow manuell in ComfyUI laden und bearbeiten möchten.
+2.  **API (JSON):** Ein reines Datenformat, das Entwickler oft nutzen. Es enthält keine visuellen Informationen (Positionen), sondern nur die Logik. Es ist oft robuster und weniger fehleranfällig bei der Generierung komplexer Strukturen.
 
-Dies ist der Hauptbereich, in dem Sie neue Workflows aus einer einfachen Textbeschreibung erstellen lassen.
-
-### 1. Workflow beschreiben
-Geben Sie in das große Textfeld eine Beschreibung dessen ein, was Ihr Workflow tun soll.
-
--   **Seien Sie detailliert:** Je genauer Ihre Beschreibung, desto besser wird das Ergebnis. Anstatt nur "Ein Bild von einer Katze" zu schreiben, versuchen Sie es mit "Ein fotorealistisches Bild einer Katze im Weltraum mit einem SDXL-Modell, das einen Helm trägt".
--   **Beispiele nutzen:** Unter dem Textfeld finden Sie einige Beispiel-Prompts. Klicken Sie darauf, um sie auszuprobieren.
-
-### 2. Prompt-Assistent
-Wenn Sie sich nicht sicher sind, wie Sie Ihren Prompt formulieren sollen, klicken Sie auf den `Prompt-Assistent`-Button. Es öffnet sich ein Chatfenster, in dem eine KI Ihnen gezielte Fragen zu Stil, Komposition, Beleuchtung und mehr stellt, um Ihren ursprünglichen Gedanken zu einem perfekten, detaillierten Prompt zu verfeinern.
-
-### 3. Workflow-Assistent
-Für technisch versierte Benutzer gibt es den `Workflow-Assistent`. Dieser Assistent führt Sie durch eine Reihe technischer Fragen (z.B. welches Modell, welcher Sampler), um einen präzisen, technischen Prompt zu erstellen, der für die Workflow-Generierung optimiert ist.
-
-### 4. Bild hochladen (für Img2Img etc.)
-Unter dem Haupt-Eingabefeld finden Sie einen Bereich zum Hochladen von Bildern.
-
--   **Zweck:** Diese Funktion ist unerlässlich für Workflows, die ein Eingangsbild benötigen, wie z.B. Image-to-Image, Inpainting oder die Verwendung von ControlNet.
--   **Anwendung:** Ziehen Sie einfach eine Bilddatei per Drag & Drop in den markierten Bereich oder klicken Sie darauf, um eine Datei auszuwählen. Eine Vorschau des ausgewählten Bildes wird angezeigt. Mit dem Mülleimer-Symbol können Sie das Bild wieder entfernen.
--   **Automatische Integration:** Wenn Sie einen Workflow mit einem hochgeladenen Bild generieren, erstellt die KI automatisch einen `LoadImage`-Knoten und konfiguriert ihn so, dass er Ihr hochgeladenes Bild verwendet und es zum Ausgangspunkt des Prozesses macht.
-
-### 5. Workflow generieren
-Wenn Sie mit Ihrer Beschreibung zufrieden sind, klicken Sie auf `Workflow generieren`. Eine Fortschrittsanzeige informiert Sie über die einzelnen Schritte: Die KI analysiert Ihre Anfrage, erstellt den Workflow und validiert ihn. Das Ergebnis erscheint im Ausgabefenster.
+### Bilder hochladen
+Für Workflows wie **Img2Img**, **Inpainting** oder **ControlNet**:
+*   Ziehen Sie ein Bild in den Upload-Bereich.
+*   Die KI erkennt das Bild automatisch und baut einen `LoadImage`-Node in den Workflow ein, der genau dieses Bild referenziert.
 
 ---
 
-## Der "Tester"-Tab: Workflows prüfen und reparieren
+## Schritt 2: Ergebnisse & Ausführung
 
-Haben Sie einen bestehenden Workflow, der nicht funktioniert? Hier können Sie ihn reparieren lassen.
+Nach der Generierung erscheint das Ergebnis im rechten **Output-Panel**. Dieses wurde für bessere Übersichtlichkeit optimiert.
 
--   **Workflow JSON:** Fügen Sie den kompletten JSON-Code Ihres ComfyUI-Workflows in dieses Feld ein.
--   **ComfyUI Fehlermeldung (Optional):** Wenn ComfyUI beim Ausführen des Workflows eine spezifische Fehlermeldung ausgibt, fügen Sie diese hier ein. Die KI wird versuchen, den Workflow gezielt zu korrigieren, um diesen Fehler zu beheben.
--   **Button:**
-    -   Wenn Sie nur ein Workflow-JSON einfügen, heißt der Button `Validieren & korrigieren`. Die KI führt eine allgemeine Prüfung durch.
-    -   Wenn Sie auch eine Fehlermeldung angeben, ändert sich der Button zu `Fehler beheben` für eine gezielte Reparatur.
+### Das neue Output-Panel
+Anstatt einer oft fehlerhaften visuellen Vorschau konzentrieren wir uns auf Code und Anleitung:
 
----
+*   **Tab "JSON Code":** Zeigt den generierten Raw-Code. Hier können Sie den Code kopieren (`📋`) oder herunterladen (`📥`).
+*   **Tab "Guide & Setup":** Eine schön formatierte Ansicht der Anforderungen.
+    *   **Custom Nodes:** Listet fehlende Erweiterungen auf, inklusive Installationsbefehl.
+    *   **Modelle:** Listet benötigte Checkpoints/LoRAs auf, inklusive Download-Link und Zielordner.
+*   **Tab "Protokolle":** Erscheint nur, wenn die KI während der Validierung Fehler gefunden und automatisch korrigiert hat.
 
-## Der "Verlauf"-Tab: Frühere Arbeiten verwalten
-
-Jeder Workflow, den Sie im `Generator`-Tab erstellen, wird automatisch hier gespeichert.
-
--   **Liste:** Zeigt alle bisherigen Generationen mit Prompt und Datum.
--   **Auswählen:** Klicken Sie auf einen Eintrag, um das Ergebnis erneut im Ausgabefenster anzuzeigen.
--   **Herunterladen (`📥`):** Laden Sie das Workflow-JSON eines bestimmten Eintrags direkt herunter.
--   **Verlauf löschen:** Entfernt alle Einträge dauerhaft. Diese Aktion kann nicht rückgängig gemacht werden.
+### Workflow ausführen (Run)
+Mit dem **Play-Button (`▶️`)** senden Sie den Workflow direkt an Ihre laufende ComfyUI-Instanz.
+*   **Voraussetzung:** Die ComfyUI-URL muss in den Einstellungen hinterlegt sein.
+*   **Live-Status:** Sie sehen einen Fortschrittsbalken, der in Echtzeit anzeigt, welcher Node gerade in ComfyUI bearbeitet wird.
 
 ---
 
-## Der "Lokales LLM"-Tab: Lokales LLM verwalten
+## Schritt 3: Der Feedback-Loop (Lernen)
 
-Dieser Tab bietet fortgeschrittene Funktionen zur Interaktion mit einem lokal betriebenen Large Language Model (LLM). **Wichtig:** Diese Funktionen setzen voraus, dass Sie einen kompatiblen lokalen LLM-Server betreiben und dessen Adresse in den `Einstellungen` korrekt konfiguriert haben.
+Dies ist eine der mächtigsten Funktionen der Suite.
 
-### RAG / Wissensdatenbank
-RAG (Retrieval-Augmented Generation) ermöglicht es Ihnen, das Wissen des LLMs mit Ihren eigenen Dokumenten zu erweitern, ohne das Modell neu trainieren zu müssen.
+**Wann erscheint er?**
+Sobald ein Workflow erfolgreich durchgelaufen ist (Status 200 vom Server), erscheint eine grüne **Feedback-Leiste** im Output-Panel.
 
-1.  **Dateien auswählen:** Ziehen Sie `.txt`- oder `.md`-Dateien in den Upload-Bereich oder klicken Sie darauf, um Dateien auszuwählen.
-2.  **Hochladen:** Klicken Sie auf `Ausgewählte Dateien hochladen`, um die Dokumente an den RAG-Service Ihres LLMs zu senden. Die hochgeladenen Inhalte stehen dem Modell dann für Anfragen zur Verfügung.
+**Was kann ich tun?**
+*   **Auto-Save (Kurzzeit):** Speichert den Workflow und den Prompt in das Kurzzeitgedächtnis des lokalen LLMs. Hilft bei ähnlichen Anfragen in der aktuellen Sitzung.
+*   **Gold-Standard (Langzeit):** Markiert diesen Workflow als "perfektes Beispiel". Er wird in die permanente Wissensdatenbank (RAG) aufgenommen und dient als Vorlage für zukünftige Generierungen.
 
-### Fine-Tuning
-Fine-Tuning passt das Verhalten des LLMs an, indem es auf einem spezifischen Datensatz trainiert wird.
-
-1.  **Trainingsdaten einfügen:** Fügen Sie Ihre Trainingsdaten in das Textfeld ein. Die Daten müssen im **JSONL-Format** vorliegen, wobei jede Zeile ein JSON-Objekt ist. Beispiel:
-    `{"prompt": "Frage 1", "completion": "Antwort 1"}`
-    `{"prompt": "Frage 2", "completion": "Antwort 2"}`
-2.  **Training starten:** Klicken Sie auf `Fine-Tuning starten`, um den Trainingsjob an Ihren lokalen Server zu senden. Der Fortschritt wird im Protokollfenster darunter angezeigt.
+*Hinweis: Diese Funktion benötigt ein konfiguriertes Lokales LLM mit RAG-Server.*
 
 ---
 
-## Das Ausgabefenster im Detail
+## Der "Tester"-Tab: Reparatur & Validierung
 
-Hier werden die Ergebnisse Ihrer Anfragen angezeigt.
+Haben Sie einen Workflow (egal ob Graph- oder API-Format), der nicht funktioniert?
 
-### Steuerelemente (oben rechts)
--   **Validieren & Korrigieren (`🐛`):** Sendet den aktuellen Workflow erneut zur Validierung und Korrektur an die KI. Nützlich, wenn Sie manuelle Änderungen vorgenommen haben oder eine zweite Meinung wünschen.
--   **Run (`▶️`):** Sendet den Workflow direkt an Ihre laufende ComfyUI-Instanz zur Ausführung. **Wichtig:** Sie müssen zuerst die Adresse Ihrer ComfyUI-API in den `Einstellungen` konfigurieren! Nach dem Start zeigt die Anwendung einen **Live-Fortschrittsbalken** mit Status-Updates direkt von ComfyUI an, sodass Sie den Fortschritt von langwierigen Generierungsjobs in Echtzeit verfolgen können.
--   **Workflow in ComfyUI laden (`📋`):** Kopiert den Workflow in die Zwischenablage und zeigt eine Anleitung an. Sie können den Workflow dann einfach in ComfyUI mit Strg+V einfügen.
--   **Copy JSON:** Kopiert den vollständigen Workflow-JSON in Ihre Zwischenablage.
--   **Download:** Lädt den Workflow als `.json`-Datei herunter.
-
-### Tabs
--   **Visualisierung:** Zeigt eine grafische Darstellung der Nodes und ihrer Verbindungen. Dies gibt Ihnen einen schnellen Überblick über die Struktur des Workflows. Sie können auf einzelne Nodes klicken, um deren Details in einem Popup-Fenster anzuzeigen.
--   **Workflow:** Zeigt den rohen JSON-Code des Workflows.
--   **Anforderungen:** Listet alle für den Workflow benötigten Modelle und Custom Nodes auf.
--   **Protokolle:** Zeigt Validierungs- oder Debugging-Informationen an, falls vorhanden.
-
-### Der Bereich "Anforderungen"
-Einer der wichtigsten Abschnitte! Er listet alles auf, was Sie benötigen, damit der Workflow funktioniert.
--   **Custom Nodes:** Zeigt an, welche zusätzlichen Nodes Sie installieren müssen. Enthält einen GitHub-Link und **direkt kopierbare Terminal-Befehle** für eine einfache Installation.
--   **Modelle:** Listet alle benötigten Modelle auf (z.B. Checkpoints, LoRAs, VAEs). Enthält einen Download-Link und den **exakten Installationspfad**, in den Sie die Datei in Ihrem `ComfyUI`-Verzeichnis ablegen müssen.
+1.  **Import:** Fügen Sie das JSON ein oder laden Sie die Datei hoch.
+2.  **Fehlerbeschreibung (Optional):** Fügen Sie die Fehlermeldung aus der ComfyUI-Konsole ein.
+3.  **Debuggen:** Klicken Sie auf den Button. Die KI analysiert die Struktur und versucht, den Fehler basierend auf ihrem Wissen über Nodes und Verbindungen zu beheben.
 
 ---
 
-## Einstellungen
+## Fortgeschrittene Funktionen
 
-Klicken Sie auf das Zahnrad-Symbol (`⚙️`) oben rechts, um die Einstellungen zu öffnen.
+### Lokales LLM (RAG & Fine-Tuning)
+Verwalten Sie Ihr eigenes KI-Gehirn im Tab **Lokales LLM**.
+*   **RAG (Wissensdatenbank):** Laden Sie Textdateien (`.txt`, `.md`) hoch, um das Wissen der KI zu erweitern (z.B. Dokumentation zu neuen Custom Nodes). Sie können die Datenbank auch direkt mit einer Frage testen.
+*   **Fine-Tuning:** Starten Sie Trainingsjobs auf Ihrem lokalen Server, um das Modell spezialisiert anzupassen.
 
--   **ComfyUI API URL:** Dies ist die wichtigste Einstellung für die Workflow-Ausführung. Damit die `Run`-Funktion funktioniert, müssen Sie hier die Adresse Ihrer ComfyUI-Instanz eingeben. Der Standardwert ist normalerweise `http://127.0.0.1:8188`.
--   **Lokale LLM API URL:** Geben Sie hier die Basis-URL für Ihren lokalen LLM-Server ein. Diese wird für die Funktionen im "Lokales LLM"-Tab (RAG und Fine-Tuning) benötigt.
--   **Quellcode herunterladen:** Lädt den gesamten Quellcode dieser Webanwendung als einzelne Textdatei herunter.
-
----
-
-## Tipps für beste Ergebnisse
-
--   **Spezifisch sein:** Geben Sie Modelltypen (SDXL, SD 1.5), Techniken (Inpainting, ControlNet) und Stile (fotorealistisch, Anime) in Ihrem Prompt an.
--   **Kontext geben:** Erklären Sie das Ziel. Anstatt "Zwei KSampler", sagen Sie "Einen KSampler für ein Basis-Bild und einen zweiten für ein Hi-Res-Fix".
--   **Komponenten prüfen:** Überprüfen Sie nach der Generierung immer den Abschnitt "Anforderungen", um sicherzustellen, dass Sie alle erforderlichen Modelle und Custom Nodes installiert haben.
+### Verlauf
+Alle generierten Workflows werden lokal gespeichert. Im Tab **Verlauf** können Sie alte Versionen wiederherstellen, ansehen oder herunterladen.
 
 ---
 
-## Qualität & Technische Details
+## Einstellungen & Installation
 
-Um die höchste Zuverlässigkeit zu gewährleisten, durchläuft jeder generierte oder korrigierte Workflow einen mehrstufigen internen Validierungsprozess:
+Klicken Sie auf das Zahnrad (`⚙️`) oben rechts.
 
-1.  **Strukturelle Validierung:** Zuerst wird die grundlegende Struktur des JSON geprüft. Jeder Wert muss den korrekten Datentyp haben (z.B. muss ein Seed-Wert eine Zahl und kein Text sein).
-2.  **Graphen-Analyse:** Der Workflow wird als logischer Graph analysiert. Die KI stellt sicher, dass alle Verbindungen konsistent sind, alle benötigten Inputs verbunden sind und keine "verwaisten" Nodes existieren.
-3.  **Semantische Validierung:** Dies ist ein "Experten-Check". Die KI prüft die Einstellungen in wichtigen Nodes auf Plausibilität. Beispielsweise wird ein `CFG`-Wert von `0` in einem `KSampler`, der den Prompt ignorieren würde, automatisch zu einem sinnvollen Standardwert wie `8.0` korrigiert.
-4.  **RFC-Konformität & Schema-Validierung:** Jeder Workflow wird so erstellt, dass er den offiziellen ComfyUI RFCs und dem neuesten Zod-Schema entspricht. Dies garantiert maximale strukturelle Korrektheit und Kompatibilität.
-
-### Automatisierte Kontexterweiterung
-Wenn eine **Lokale LLM API URL** in den Einstellungen konfiguriert ist, erweitert die Suite automatisch ihre Fähigkeiten:
--   **Retrieval-Augmented Generation (RAG):** Vor der Generierung eines Workflows fragt das System Ihre lokale Wissensdatenbank mit Ihrem Prompt ab. Werden relevante Informationen gefunden, werden diese der Haupt-KI als zusätzlicher Kontext zur Verfügung gestellt, was zu genaueren und maßgeschneiderten Workflows führt.
--   **Dynamisches System-Inventar:** Die Anwendung ruft eine Echtzeit-Liste Ihrer verfügbaren Modelle (Checkpoints, LoRAs usw.) von Ihrem lokalen Server ab. Die KI wird dann angewiesen, **ausschließlich** Modell-Dateinamen aus dieser Liste zu verwenden, was Fehler durch halluzinierte oder nicht verfügbare Modellnamen drastisch reduziert.
+*   **ComfyUI API URL:** Adresse Ihrer ComfyUI-Instanz (meist `http://127.0.0.1:8188`).
+*   **Lokale LLM API URL:** Adresse Ihres Ollama/RAG-Servers.
+*   **Anbieter:** Wählen Sie zwischen Google Gemini (Cloud) oder einem lokalen LLM (Ollama) als Gehirn für den Generator.
+*   **Quellcode:** Laden Sie den kompletten Code dieser App herunter.
 
 ---
 
 ## Fehlerbehebung
 
-### Verbindungsfehler bei "Run" / WebSocket (für Entwickler)
+### Verbindungsprobleme ("Run" Button)
+Wenn der "Run"-Button nicht funktioniert, liegt es oft an CORS-Blockaden des Browsers.
 
-Wenn Sie diese Anwendung aus dem Quellcode mit dem Vite-Entwicklungsserver (`npm run dev`) ausführen, können bei der Verwendung der "Run"-Funktion oder bei Live-Fortschrittsanzeigen Verbindungsfehler auftreten. Die Ursache ist in der Regel die standardmäßige Content Security Policy (CSP) von Vite, eine Sicherheitsfunktion, die einschränkt, mit welchen Netzwerkadressen sich die Anwendung verbinden darf.
+**Lösung:** Starten Sie ComfyUI mit dem Argument `--enable-cors`.
+Beispiel (Windows .bat Datei):
+`.\python_embeded\python.exe -s ComfyUI\main.py --windows-standalone-build --enable-cors`
 
-**Symptom:** Die "Run"-Funktion schlägt fehl, und in der Entwicklerkonsole Ihres Browsers wird ein Fehler wie dieser angezeigt:
-`Content Security Policy directive: "connect-src ... 'self'"`
-
-**Lösung:** Sie müssen den Vite-Entwicklungsserver so konfigurieren, dass er Verbindungen zu Ihrem ComfyUI-Server explizit erlaubt.
-
-1.  Erstellen Sie eine Datei mit dem Namen `vite.config.ts` im Hauptverzeichnis des Projekts (im selben Ordner wie `package.json`).
-2.  Fügen Sie den folgenden Inhalt in diese neue Datei ein. **Wichtig:** Wenn Ihr ComfyUI-Server unter einer anderen Adresse läuft, ersetzen Sie `http://192.168.1.73:8188` und `ws://192.168.1.73:8188` durch die korrekte Adresse.
-
-    ```typescript
-    import { defineConfig } from 'vite'
-    import react from '@vitejs/plugin-react'
-
-    // https://vitejs.dev/config/
-    export default defineConfig({
-      plugins: [react()],
-      server: {
-        host: true, // Erlaubt Zugriff aus dem Netzwerk
-        headers: {
-          // Diese Richtlinie erlaubt der App, sich mit sich selbst ('self')
-          // und mit Ihrem ComfyUI-Server über HTTP und WebSocket zu verbinden.
-          'Content-Security-Policy': 
-            "connect-src 'self' http://192.168.1.73:8188 ws://192.168.1.73:8188"
-        }
-      }
-    })
-    ```
-3.  Stoppen Sie den Vite-Entwicklungsserver, falls er läuft (Strg + C im Terminal).
-4.  Starten Sie den Server neu mit `npm run dev`.
-
-Diese Änderung weist Ihren Entwicklungsserver an, die korrekte Sicherheitsrichtlinie an den Browser zu senden, der dann die WebSocket-Verbindung zu ComfyUI zulässt.
+### Mixed Content Fehler
+Wenn diese App über HTTPS läuft, ComfyUI aber über HTTP, blockiert der Browser die Verbindung.
+**Lösung:** Erlauben Sie "Unsichere Inhalte" in den Seiteneinstellungen Ihres Browsers (Schloss-Symbol in der Adressleiste).
