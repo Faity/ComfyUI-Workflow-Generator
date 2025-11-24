@@ -1,6 +1,4 @@
 
-
-
 export const translations = {
   en: {
     locale: 'en-US',
@@ -74,6 +72,7 @@ export const translations = {
     tooltipLoad: 'Load Workflow in ComfyUI (Copy & Paste)',
     tooltipCopy: 'Copy Workflow JSON',
     tooltipDownload: 'Download Workflow JSON',
+    downloadImage: 'Download Image',
     customNodes: 'Required Custom Nodes',
     noCustomNodes: 'No custom nodes required.',
     models: 'Required Models',
@@ -268,6 +267,7 @@ export const translations = {
     tooltipLoad: 'Workflow in ComfyUI laden (Kopieren & Einfügen)',
     tooltipCopy: 'Workflow-JSON kopieren',
     tooltipDownload: 'Workflow-JSON herunterladen',
+    downloadImage: 'Bild herunterladen',
     customNodes: 'Benötigte Custom Nodes',
     noCustomNodes: 'Keine benutzerdefinierten Nodes erforderlich.',
     models: 'Benötigte Modelle',

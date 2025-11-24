@@ -1,6 +1,6 @@
 
 import { v4 as uuidv4 } from 'uuid';
-import type { ComfyUIWorkflow, ComfyUIImageUploadResponse } from '../types';
+import type { ComfyUIWorkflow, ComfyUIImageUploadResponse, ComfyUIImage } from '../types';
 
 interface ProgressStatus {
   message: string;
@@ -58,11 +58,12 @@ export const executeWorkflow = async (
   workflow: ComfyUIWorkflow,
   apiUrl: string,
   onProgress: (status: ProgressStatus) => void,
-  onComplete: () => void,
+  onComplete: (images: ComfyUIImage[]) => void,
   onError: (error: Error) => void
 ): Promise<void> => {
     const clientId = uuidv4();
     let promptId: string;
+    const generatedImages: ComfyUIImage[] = [];
     
     onProgress({ message: 'Konvertiere Workflow in API-Format...', progress: 5 });
     
@@ -138,7 +139,7 @@ export const executeWorkflow = async (
             if (data.type === 'executing' && data.data.prompt_id === promptId) {
                 if (data.data.node === null) {
                     if (ws.readyState === WebSocket.OPEN) ws.close();
-                    onComplete();
+                    onComplete(generatedImages);
                 } else {
                     const nodeName = nodesById.get(String(data.data.node)) || `Node ${data.data.node}`;
                     onProgress({ message: `Executing: ${nodeName}...`, progress: 0 });
@@ -149,6 +150,13 @@ export const executeWorkflow = async (
                 const { value, max } = data.data;
                 const progress = (value / max) * 100;
                 onProgress({ message: `Processing... (${value}/${max})`, progress });
+            }
+            
+            if (data.type === 'executed' && data.data.prompt_id === promptId) {
+                const output = data.data.output;
+                if (output && output.images) {
+                    generatedImages.push(...output.images);
+                }
             }
         };
 

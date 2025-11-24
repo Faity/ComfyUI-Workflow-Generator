@@ -18,7 +18,7 @@ import { generateWorkflow, validateAndCorrectWorkflow, debugAndCorrectWorkflow }
 import { executeWorkflow, uploadImage, validateWorkflowAgainstApi } from './services/comfyuiService';
 import { getServerInventory, generateWorkflowLocal, validateAndCorrectWorkflowLocal, debugAndCorrectWorkflowLocal } from './services/localLlmService';
 import { initializeApiKey } from './services/apiKeyService';
-import type { GeneratedWorkflowResponse, HistoryEntry, ComfyUIWorkflow, SystemInventory, LlmProvider, WorkflowFormat } from './types';
+import type { GeneratedWorkflowResponse, HistoryEntry, ComfyUIWorkflow, SystemInventory, LlmProvider, WorkflowFormat, ComfyUIImage } from './types';
 import { useLanguage } from './context/LanguageContext';
 import { useTranslations } from './hooks/useTranslations';
 
@@ -33,6 +33,7 @@ const App: React.FC = () => {
   const [prompt, setPrompt] = useState<string>('');
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [generatedData, setGeneratedData] = useState<GeneratedWorkflowResponse | null>(null);
+  const [generatedImages, setGeneratedImages] = useState<ComfyUIImage[]>([]);
   const [workflowFormat, setWorkflowFormat] = useState<WorkflowFormat>('api'); // Default to API
   const [loadingState, setLoadingState] = useState<LoadingState>({ active: false, message: '', progress: 0 });
   const [mainView, setMainView] = useState<MainView>('generator');
@@ -150,6 +151,7 @@ const App: React.FC = () => {
   const handleGenerate = async () => {
     if (!ensureApiKey() || !prompt.trim()) return;
     setGeneratedData(null);
+    setGeneratedImages([]); // Clear previous images
     setSelectedHistoryId(null);
     setLastRunSuccess(false); // Reset feedback state
     setWorkflowFormat('api'); // Enforce API format for new generations
@@ -272,6 +274,7 @@ const App: React.FC = () => {
       
       setWorkflowFormat(format);
       setGeneratedData(importData);
+      setGeneratedImages([]);
       setSelectedHistoryId(null);
       setLastRunSuccess(false);
       showToast(t.toastJsonImported, 'success');
@@ -350,20 +353,29 @@ const App: React.FC = () => {
     
     setLoadingState({ active: true, message: t.toastSendingWorkflow, progress: 0 });
     setLastRunSuccess(false);
+    setGeneratedImages([]); // Reset images
 
     // executeWorkflow handles graph->api conversion if needed.
-    // If it's already API format (workflowFormat === 'api'), convertToApiFormat in comfyuiService 
-    // needs to handle it (it returns as-is if it looks like API format).
-    
     await executeWorkflow(
-      generatedData.workflow as ComfyUIWorkflow, // Casting for now, executeWorkflow handles loose types internally
+      generatedData.workflow as ComfyUIWorkflow,
       comfyUIUrl,
       (status) => { // onProgress
         setLoadingState({ active: true, message: status.message, progress: status.progress });
       },
-      () => { // onComplete
+      (images) => { // onComplete
+        setGeneratedImages(images);
         showToast(t.toastWorkflowExecutionComplete, 'success');
         setLastRunSuccess(true); // Trigger feedback loop UI
+        
+        // Update history with generated images for this run
+        if (selectedHistoryId) {
+             setHistory(prev => prev.map(entry => 
+                 entry.id === selectedHistoryId 
+                 ? { ...entry, images: images } 
+                 : entry
+             ));
+        }
+
         setTimeout(() => {
             setLoadingState({ active: false, message: '', progress: 0 });
         }, 1500);
@@ -379,8 +391,8 @@ const App: React.FC = () => {
     setPrompt(entry.prompt);
     setGeneratedData(entry.data);
     setSelectedHistoryId(entry.id);
-    // Restore format from history if present, else default to graph (backward compatibility)
     setWorkflowFormat(entry.format || 'graph');
+    setGeneratedImages(entry.images || []);
     setMainView('generator');
     setUploadedImage(null);
     setLastRunSuccess(false); // Reset feedback on history load
@@ -551,6 +563,7 @@ const App: React.FC = () => {
           
           <OutputPanel
             workflowData={generatedData}
+            generatedImages={generatedImages}
             onDownload={() => generatedData && handleDownload(generatedData)}
             onCopy={handleCopy}
             onRun={handleRunWorkflow}
@@ -562,6 +575,7 @@ const App: React.FC = () => {
             lastRunSuccess={lastRunSuccess}
             currentPrompt={prompt}
             ragApiUrl={ragApiUrl}
+            comfyUIUrl={comfyUIUrl}
             showToast={showToast}
           />
         </main>

@@ -90,6 +90,7 @@ export interface HistoryEntry {
   timestamp: string;
   data: GeneratedWorkflowResponse;
   format?: WorkflowFormat;
+  images?: ComfyUIImage[];
 }
 
 export interface SystemInventory {
@@ -105,6 +106,12 @@ export interface ComfyUIImageUploadResponse {
   name: string;
   subfolder: string;
   type: 'input' | 'temp';
+}
+
+export interface ComfyUIImage {
+  filename: string;
+  subfolder: string;
+  type: string;
 }
 
 export type LlmProvider = 'gemini' | 'local';

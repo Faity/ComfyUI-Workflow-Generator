@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import type { GeneratedWorkflowResponse, ValidationLogEntry, DebugLogEntry, WorkflowFormat } from '../types';
+import type { GeneratedWorkflowResponse, ValidationLogEntry, DebugLogEntry, WorkflowFormat, ComfyUIImage } from '../types';
 import { DownloadIcon, ClipboardIcon, PlayIcon, BugAntIcon, Square2StackIcon, SparklesIcon, DatabaseIcon } from './Icons';
 import { useTranslations } from '../hooks/useTranslations';
 import ProgressBarLoader from './Loader';
@@ -8,6 +8,7 @@ import { learnWorkflow } from '../services/localLlmService';
 
 interface OutputPanelProps {
   workflowData: GeneratedWorkflowResponse | null;
+  generatedImages?: ComfyUIImage[];
   onDownload: () => void;
   onCopy: () => void;
   onRun: () => void;
@@ -19,6 +20,7 @@ interface OutputPanelProps {
   lastRunSuccess?: boolean;
   currentPrompt?: string;
   ragApiUrl?: string;
+  comfyUIUrl?: string;
   showToast?: (message: string, type: 'success' | 'error') => void;
 }
 
@@ -51,7 +53,7 @@ const FeedbackBar: React.FC<{
     if (saved) return null;
 
     return (
-        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-teal-100 p-4 flex flex-col md:flex-row items-center justify-between gap-4 animate-fade-in">
+        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border-t border-teal-100 p-4 flex flex-col md:flex-row items-center justify-between gap-4 animate-fade-in">
             <div className="flex items-start space-x-3">
                  <div className="bg-teal-100 p-2 rounded-full text-teal-600">
                     <SparklesIcon className="w-5 h-5" />
@@ -86,8 +88,73 @@ const FeedbackBar: React.FC<{
     );
 }
 
+const ImagePreview: React.FC<{ images: ComfyUIImage[], comfyUrl: string }> = ({ images, comfyUrl }) => {
+    const t = useTranslations();
+    
+    // Get last image as main preview
+    const mainImage = images[images.length - 1];
+    
+    const getImageUrl = (img: ComfyUIImage) => {
+        const params = new URLSearchParams({
+            filename: img.filename,
+            subfolder: img.subfolder,
+            type: img.type
+        });
+        return `${comfyUrl}/view?${params.toString()}`;
+    };
+
+    const downloadImage = async (img: ComfyUIImage) => {
+        const url = getImageUrl(img);
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = img.filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(blobUrl);
+        } catch (e) {
+            console.error("Download failed", e);
+        }
+    };
+
+    return (
+        <div className="bg-slate-900 flex flex-col items-center justify-center p-4 min-h-[300px] relative group overflow-hidden">
+            <div className="w-full h-full flex items-center justify-center">
+                 <img 
+                    src={getImageUrl(mainImage)} 
+                    alt="Generiertes Bild" 
+                    className="max-h-[500px] max-w-full object-contain rounded shadow-2xl"
+                 />
+            </div>
+            <div className="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button 
+                    onClick={() => downloadImage(mainImage)}
+                    className="p-2 bg-black/60 text-white rounded-full hover:bg-black/80 backdrop-blur-sm transition-colors"
+                    title={t.downloadImage}
+                >
+                    <DownloadIcon className="w-5 h-5" />
+                </button>
+            </div>
+            {images.length > 1 && (
+                <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-2 px-4 overflow-x-auto">
+                    {images.map((img, idx) => (
+                        <div key={idx} className={`w-12 h-12 border-2 rounded overflow-hidden cursor-pointer ${img === mainImage ? 'border-teal-500' : 'border-white/30'}`}>
+                            <img src={getImageUrl(img)} className="w-full h-full object-cover" />
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
 const OutputPanel: React.FC<OutputPanelProps> = ({ 
     workflowData, 
+    generatedImages = [],
     onDownload, 
     onCopy, 
     onRun, 
@@ -98,6 +165,7 @@ const OutputPanel: React.FC<OutputPanelProps> = ({
     lastRunSuccess = false,
     currentPrompt = '',
     ragApiUrl = '',
+    comfyUIUrl = '',
     showToast = () => {}
 }) => {
   const [activeTab, setActiveTab] = useState<Tab>('json');
@@ -138,6 +206,7 @@ const OutputPanel: React.FC<OutputPanelProps> = ({
 
   const { workflow, requirements, validationLog, correctionLog } = workflowData;
   const hasLogs = (validationLog && validationLog.length > 0) || (correctionLog && correctionLog.length > 0);
+  const hasImages = generatedImages && generatedImages.length > 0;
 
   const renderLogEntry = (log: ValidationLogEntry | DebugLogEntry, index: number) => {
     const isValidationLog = 'check' in log;
@@ -186,6 +255,11 @@ const OutputPanel: React.FC<OutputPanelProps> = ({
   return (
     <div className="relative w-full lg:w-1/2 glass-panel rounded-2xl flex flex-col overflow-hidden h-[calc(100vh-8rem)]">
       
+      {/* Image Preview Area - Always visible if images exist */}
+      {hasImages && comfyUIUrl && (
+          <ImagePreview images={generatedImages} comfyUrl={comfyUIUrl} />
+      )}
+
       {/* Feedback Bar for Successful Runs */}
       {lastRunSuccess && ragApiUrl && (
           <FeedbackBar 
