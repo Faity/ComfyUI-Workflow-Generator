@@ -27,6 +27,16 @@ export interface ComfyUIWorkflow {
   version: number;
 }
 
+export interface ComfyUIApiNode {
+  class_type: string;
+  inputs: { [key: string]: any };
+  _meta?: { title?: string };
+}
+
+export interface ComfyUIApiWorkflow {
+  [key: string]: ComfyUIApiNode;
+}
+
 export interface CustomNodeRequirement {
   name: string;
   url: string | null;
@@ -58,7 +68,7 @@ export interface DebugLogEntry {
 }
 
 export interface GeneratedWorkflowResponse {
-  workflow: ComfyUIWorkflow;
+  workflow: ComfyUIWorkflow | ComfyUIApiWorkflow;
   requirements: WorkflowRequirements;
   validationLog?: ValidationLogEntry[];
   correctionLog?: DebugLogEntry[];
@@ -66,7 +76,7 @@ export interface GeneratedWorkflowResponse {
 
 export interface ValidationResponse {
     validationLog: ValidationLogEntry[];
-    correctedWorkflow: ComfyUIWorkflow;
+    correctedWorkflow: ComfyUIWorkflow; // Validator currently supports graph format primarily
 }
 
 export interface DebugResponse {
@@ -79,6 +89,7 @@ export interface HistoryEntry {
   prompt: string;
   timestamp: string;
   data: GeneratedWorkflowResponse;
+  format?: WorkflowFormat;
 }
 
 export interface SystemInventory {
@@ -97,3 +108,4 @@ export interface ComfyUIImageUploadResponse {
 }
 
 export type LlmProvider = 'gemini' | 'local';
+export type WorkflowFormat = 'graph' | 'api';

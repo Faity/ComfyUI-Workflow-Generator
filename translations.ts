@@ -58,6 +58,9 @@ export const translations = {
     inputPanelImageUpload: 'Upload Image (Optional)',
     inputPanelImageUploadSubtext: 'For Img2Img, Inpainting, or ControlNet workflows.',
     inputPanelDropzone: 'Drag & drop an image here, or click to select a file.',
+    inputPanelFormatLabel: 'Output Format:',
+    formatGraph: 'Graph (GUI)',
+    formatApi: 'API (JSON)',
 
     // OutputPanel.tsx
     waitingForGeneration: 'Waiting for Generation',
@@ -81,6 +84,8 @@ export const translations = {
     analysis: 'Analysis:',
     action: 'Action:',
     reasoning: 'Reasoning:',
+    visualizerNotAvailable: 'Visualizer Not Available',
+    visualizerNotAvailableSubtext: 'The visualizer is only available for Graph-format workflows. You generated an API-format workflow.',
 
     // TesterPanel.tsx
     testerTitle: 'Validate & Correct Workflow',
@@ -244,6 +249,9 @@ export const translations = {
     inputPanelImageUpload: 'Bild hochladen (Optional)',
     inputPanelImageUploadSubtext: 'Für Img2Img, Inpainting oder ControlNet-Workflows.',
     inputPanelDropzone: 'Bild hierher ziehen oder klicken, um eine Datei auszuwählen.',
+    inputPanelFormatLabel: 'Ausgabe-Format:',
+    formatGraph: 'Graph (Visuell)',
+    formatApi: 'API (JSON)',
 
     // OutputPanel.tsx
     waitingForGeneration: 'Warte auf Generierung',
@@ -267,6 +275,8 @@ export const translations = {
     analysis: 'Analyse:',
     action: 'Aktion:',
     reasoning: 'Begründung:',
+    visualizerNotAvailable: 'Visualisierung nicht verfügbar',
+    visualizerNotAvailableSubtext: 'Der Visualizer ist nur für Workflows im Graph-Format verfügbar. Sie haben einen Workflow im API-Format generiert.',
 
     // TesterPanel.tsx
     testerTitle: 'Workflow validieren & korrigieren',

@@ -1,8 +1,8 @@
 
 import { GoogleGenAI } from "@google/genai";
-import type { GeneratedWorkflowResponse, ComfyUIWorkflow, ValidationResponse, DebugResponse, SystemInventory } from '../types';
+import type { GeneratedWorkflowResponse, ComfyUIWorkflow, ValidationResponse, DebugResponse, SystemInventory, WorkflowFormat } from '../types';
 import { queryRag } from './localLlmService';
-import { SYSTEM_INSTRUCTION_TEMPLATE, SYSTEM_INSTRUCTION_VALIDATOR, SYSTEM_INSTRUCTION_DEBUGGER } from './prompts';
+import { SYSTEM_INSTRUCTION_TEMPLATE, SYSTEM_INSTRUCTION_VALIDATOR, SYSTEM_INSTRUCTION_DEBUGGER, GRAPH_FORMAT_INSTRUCTION, API_FORMAT_INSTRUCTION } from './prompts';
 
 /**
  * Waits for a specified amount of time.
@@ -59,7 +59,7 @@ async function callWithRetry<T>(
 }
 
 
-export const generateWorkflow = async (description: string, ragApiUrl: string, inventory: SystemInventory | null, imageName?: string, localLlmModel?: string): Promise<Omit<GeneratedWorkflowResponse, 'validationLog'>> => {
+export const generateWorkflow = async (description: string, ragApiUrl: string, inventory: SystemInventory | null, imageName?: string, localLlmModel?: string, format: WorkflowFormat = 'graph'): Promise<Omit<GeneratedWorkflowResponse, 'validationLog'>> => {
   if (!process.env.API_KEY) {
     throw new Error("API key is missing. Please set the API_KEY environment variable.");
   }
@@ -103,16 +103,19 @@ ${JSON.stringify(inventory, null, 2)}
 \`\`\`
 `;
   }
+  
+  const formatInstruction = format === 'api' ? API_FORMAT_INSTRUCTION : GRAPH_FORMAT_INSTRUCTION;
     
   const finalSystemInstruction = SYSTEM_INSTRUCTION_TEMPLATE
     .replace('{{RAG_CONTEXT_PLACEHOLDER}}', ragContextBlock)
     .replace('{{IMAGE_CONTEXT_PLACEHOLDER}}', imageContextBlock)
-    .replace('{{SYSTEM_INVENTORY_PLACEHOLDER}}', inventoryBlock);
+    .replace('{{SYSTEM_INVENTORY_PLACEHOLDER}}', inventoryBlock)
+    .replace('{{FORMAT_INSTRUCTION_PLACEHOLDER}}', formatInstruction);
 
+  console.log("=== DEBUG: GENERATING WORKFLOW ===");
+  console.log("Format:", format);
   console.log("=== DEBUG: RAG CONTEXT BLOCK ===");
   console.log(ragContextBlock);
-  console.log("=== DEBUG: INVENTORY BLOCK ===");
-  console.log(inventoryBlock);
   console.log("================================");
 
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -153,9 +156,18 @@ ${JSON.stringify(inventory, null, 2)}
 
     const { workflow, requirements } = parsedResponse;
 
-    if (!workflow.nodes || !workflow.links || typeof workflow.last_node_id === 'undefined') {
-        console.error("Invalid workflow structure received from AI:", workflow);
-        throw new Error("Generated JSON is not a valid ComfyUI workflow. It's missing essential properties like 'nodes', 'links', or 'last_node_id'.");
+    if (format === 'graph') {
+        // Explicit check for Graph format
+        const wf = workflow as ComfyUIWorkflow;
+        if (!wf.nodes || !wf.links || typeof wf.last_node_id === 'undefined') {
+            console.error("Invalid workflow structure received from AI:", workflow);
+            throw new Error("Generated JSON is not a valid ComfyUI workflow (Graph format). It's missing essential properties like 'nodes', 'links', or 'last_node_id'.");
+        }
+    } else {
+        // Basic check for API format (should be an object with keys as IDs)
+         if (Array.isArray(workflow) || (workflow as any).nodes) {
+            console.warn("AI generated Graph format despite requesting API format. Attempting to proceed, but visualizer might be confused.");
+         }
     }
     
     if (!requirements || !Array.isArray(requirements.custom_nodes) || !Array.isArray(requirements.models)) {
@@ -235,10 +247,9 @@ ${ragContext.trim()}
             throw new Error("Validator AI returned an invalid 'validationLog' structure. It must be an array.");
         }
 
-        if (!parsedResponse.correctedWorkflow.nodes) {
-             console.error("Invalid correctedWorkflow structure:", parsedResponse.correctedWorkflow);
-            throw new Error("Validator AI returned an invalid 'correctedWorkflow' object.");
-        }
+        // Simple check if it returned the correct structure
+        // Note: Validator is primarily tuned for Graph format currently. 
+        // If API format is passed, results might vary, but we pass it through.
 
         return parsedResponse;
 

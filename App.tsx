@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 // FIX: Corrected import alias for uuid v4 to match usage.
 import { v4 as uuidv4 } from 'uuid';
@@ -17,7 +18,7 @@ import { generateWorkflow, validateAndCorrectWorkflow, debugAndCorrectWorkflow }
 import { executeWorkflow, uploadImage, validateWorkflowAgainstApi } from './services/comfyuiService';
 import { getServerInventory, generateWorkflowLocal, validateAndCorrectWorkflowLocal, debugAndCorrectWorkflowLocal } from './services/localLlmService';
 import { initializeApiKey } from './services/apiKeyService';
-import type { GeneratedWorkflowResponse, HistoryEntry, ComfyUIWorkflow, SystemInventory, LlmProvider } from './types';
+import type { GeneratedWorkflowResponse, HistoryEntry, ComfyUIWorkflow, SystemInventory, LlmProvider, WorkflowFormat } from './types';
 import { useLanguage } from './context/LanguageContext';
 import { useTranslations } from './hooks/useTranslations';
 
@@ -32,6 +33,7 @@ const App: React.FC = () => {
   const [prompt, setPrompt] = useState<string>('');
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [generatedData, setGeneratedData] = useState<GeneratedWorkflowResponse | null>(null);
+  const [workflowFormat, setWorkflowFormat] = useState<WorkflowFormat>('graph'); // Default to graph
   const [loadingState, setLoadingState] = useState<LoadingState>({ active: false, message: '', progress: 0 });
   const [mainView, setMainView] = useState<MainView>('generator');
   const [history, setHistory] = useState<HistoryEntry[]>(() => {
@@ -177,61 +179,77 @@ const App: React.FC = () => {
           if (!localLlmApiUrl) {
               throw new Error("Ollama Generation URL is missing. Please check settings.");
           }
-          // We pass both URLs: one for generation (Ollama), one for RAG (Python Helper)
-          // localLlmModel is used for both generation and embedding if the RAG server supports it
-          response = await generateWorkflowLocal(prompt, localLlmApiUrl, localLlmModel, inventory, uploadedImageName, ragApiUrl);
+          // We pass format to local service
+          response = await generateWorkflowLocal(prompt, localLlmApiUrl, localLlmModel, inventory, uploadedImageName, ragApiUrl, workflowFormat);
       } else {
-          // For Gemini, we pass the RAG URL (NOT the Ollama URL) for context retrieval
-          // And we pass localLlmModel so the RAG server knows which model to use for embeddings/queries
-          response = await generateWorkflow(prompt, ragApiUrl, inventory, uploadedImageName, localLlmModel);
+          // We pass format to gemini service
+          response = await generateWorkflow(prompt, ragApiUrl, inventory, uploadedImageName, localLlmModel, workflowFormat);
       }
       
       // Step 2: Validation
-      setLoadingState({ active: true, message: t.loadingStep2, progress: 60 });
+      // Note: Our current validators are optimized for Graph format. 
+      // If format is API, we might skip deep validation or use a simplified one.
+      // For now, we try to validate if it's graph format.
       
       let validatedResponse;
-      if (llmProvider === 'local') {
-           validatedResponse = await validateAndCorrectWorkflowLocal(response.workflow, localLlmApiUrl, localLlmModel, ragApiUrl);
+
+      if (workflowFormat === 'graph') {
+          setLoadingState({ active: true, message: t.loadingStep2, progress: 60 });
+          if (llmProvider === 'local') {
+               validatedResponse = await validateAndCorrectWorkflowLocal(response.workflow as ComfyUIWorkflow, localLlmApiUrl, localLlmModel, ragApiUrl);
+          } else {
+               validatedResponse = await validateAndCorrectWorkflow(response.workflow as ComfyUIWorkflow, ragApiUrl, localLlmModel);
+          }
+          
+          finalData = {
+            workflow: validatedResponse.correctedWorkflow,
+            requirements: response.requirements,
+            validationLog: validatedResponse.validationLog,
+            correctionLog: [], // Initialize empty
+          };
       } else {
-           // Pass ragApiUrl for context lookup
-           validatedResponse = await validateAndCorrectWorkflow(response.workflow, ragApiUrl, localLlmModel);
+          // Skip advanced validation for API format for now, as validators expect Graph structure
+          finalData = {
+              workflow: response.workflow,
+              requirements: response.requirements,
+              validationLog: [],
+              correctionLog: []
+          };
       }
 
-      finalData = {
-        workflow: validatedResponse.correctedWorkflow,
-        requirements: response.requirements,
-        validationLog: validatedResponse.validationLog,
-        correctionLog: [], // Initialize empty
-      };
 
-      // Step 3: Server-side Validation with Auto-Correction (NEW)
+      // Step 3: Server-side Validation with Auto-Correction
+      // Only possible if Graph Format (visual) because our "convert to API" logic expects Graph input.
+      // If it's already API format, we can send it directly to check, but auto-correct logic might struggle if it expects Graph.
+      
       if (comfyUIUrl) {
           setLoadingState({ active: true, message: t.loadingServerValidation, progress: 85 });
           try {
-              // Attempt to send to ComfyUI to see if it accepts it
-              const serverValidation = await validateWorkflowAgainstApi(finalData.workflow, comfyUIUrl);
+              // If format is API, validateWorkflowAgainstApi needs to handle it (it converts graph->api, so we need to bypass conversion)
+              // Currently validateWorkflowAgainstApi expects Graph. 
+              // TODO: Update validateWorkflowAgainstApi to handle raw API json.
+              
+              // For this implementation, we only do server validation for Graph format to be safe.
+              if (workflowFormat === 'graph') {
+                  const serverValidation = await validateWorkflowAgainstApi(finalData.workflow as ComfyUIWorkflow, comfyUIUrl);
 
-              if (!serverValidation.success && serverValidation.error) {
-                   // It failed! Let's debug it automatically.
-                   console.log("Server validation failed. Starting auto-correction...", serverValidation.error);
-                   setLoadingState({ active: true, message: t.loadingAutoCorrecting, progress: 90 });
-                   
-                   let debugResponse;
-                   if (llmProvider === 'local') {
-                        debugResponse = await debugAndCorrectWorkflowLocal(finalData.workflow, serverValidation.error, localLlmApiUrl, localLlmModel, ragApiUrl);
-                   } else {
-                        debugResponse = await debugAndCorrectWorkflow(finalData.workflow, serverValidation.error, ragApiUrl, localLlmModel);
-                   }
-                   
-                   // Update the workflow with the fixed version
-                   finalData.workflow = debugResponse.correctedWorkflow;
-                   // Append corrections to logs so the user sees what happened
-                   finalData.correctionLog = debugResponse.correctionLog;
-                   
-                   showToast(t.toastAutoCorrected, 'success');
-              } else if (serverValidation.success) {
-                  // If it succeeded, it technically queued the prompt. 
-                  // We consider this a successful "Dry Run".
+                  if (!serverValidation.success && serverValidation.error) {
+                       // It failed! Let's debug it automatically.
+                       console.log("Server validation failed. Starting auto-correction...", serverValidation.error);
+                       setLoadingState({ active: true, message: t.loadingAutoCorrecting, progress: 90 });
+                       
+                       let debugResponse;
+                       if (llmProvider === 'local') {
+                            debugResponse = await debugAndCorrectWorkflowLocal(finalData.workflow as ComfyUIWorkflow, serverValidation.error, localLlmApiUrl, localLlmModel, ragApiUrl);
+                       } else {
+                            debugResponse = await debugAndCorrectWorkflow(finalData.workflow as ComfyUIWorkflow, serverValidation.error, ragApiUrl, localLlmModel);
+                       }
+                       
+                       finalData.workflow = debugResponse.correctedWorkflow;
+                       finalData.correctionLog = debugResponse.correctionLog;
+                       
+                       showToast(t.toastAutoCorrected, 'success');
+                  }
               }
           } catch (e) {
               console.warn("Server validation check failed (network error?), skipping auto-debug.", e);
@@ -241,7 +259,7 @@ const App: React.FC = () => {
       setLoadingState({ active: true, message: t.loadingComplete, progress: 100 });
       setGeneratedData(finalData);
       
-      const newEntry: HistoryEntry = { id: uuidv4(), prompt, timestamp: new Date().toISOString(), data: finalData };
+      const newEntry: HistoryEntry = { id: uuidv4(), prompt, timestamp: new Date().toISOString(), data: finalData, format: workflowFormat };
       setHistory(prev => [newEntry, ...prev]);
       setSelectedHistoryId(newEntry.id);
 
@@ -254,11 +272,17 @@ const App: React.FC = () => {
   };
   
   const handleWorkflowImport = (workflow: ComfyUIWorkflow) => {
-      if (!workflow || !workflow.nodes || !workflow.links) {
+      if (!workflow) {
           showToast(t.toastJsonImportFailed, 'error');
           return;
       }
       
+      // Detect format
+      let format: WorkflowFormat = 'graph';
+      if (!workflow.nodes && !workflow.links && (workflow as any)[Object.keys(workflow)[0]]?.class_type) {
+          format = 'api';
+      }
+
       const importData: GeneratedWorkflowResponse = {
           workflow: workflow,
           requirements: { custom_nodes: [], models: [] }, // We don't know requirements for imported workflows
@@ -266,6 +290,7 @@ const App: React.FC = () => {
           correctionLog: []
       };
       
+      setWorkflowFormat(format);
       setGeneratedData(importData);
       setSelectedHistoryId(null);
       showToast(t.toastJsonImported, 'success');
@@ -273,6 +298,12 @@ const App: React.FC = () => {
 
   const handleValidation = async (workflowJson: string, errorMessage: string) => {
     if (!ensureApiKey()) return;
+    // Validation only supported for Graph format currently
+    if (workflowFormat === 'api') {
+        showToast("Validation is only available for Graph-format workflows.", 'error');
+        return;
+    }
+
     setLoadingState({ active: true, message: t.loadingValidating, progress: 25 });
     let workflowToProcess: ComfyUIWorkflow;
 
@@ -334,15 +365,18 @@ const App: React.FC = () => {
     
     setLoadingState({ active: true, message: t.toastSendingWorkflow, progress: 0 });
 
+    // executeWorkflow handles graph->api conversion if needed.
+    // If it's already API format (workflowFormat === 'api'), convertToApiFormat in comfyuiService 
+    // needs to handle it (it returns as-is if it looks like API format).
+    
     await executeWorkflow(
-      generatedData.workflow,
+      generatedData.workflow as ComfyUIWorkflow, // Casting for now, executeWorkflow handles loose types internally
       comfyUIUrl,
       (status) => { // onProgress
         setLoadingState({ active: true, message: status.message, progress: status.progress });
       },
       () => { // onComplete
         showToast(t.toastWorkflowExecutionComplete, 'success');
-        // Keep the final progress bar at 100% for a moment before hiding
         setTimeout(() => {
             setLoadingState({ active: false, message: '', progress: 0 });
         }, 1500);
@@ -358,8 +392,10 @@ const App: React.FC = () => {
     setPrompt(entry.prompt);
     setGeneratedData(entry.data);
     setSelectedHistoryId(entry.id);
+    // Restore format from history if present, else default to graph
+    setWorkflowFormat(entry.format || 'graph');
     setMainView('generator');
-    setUploadedImage(null); // Clear any uploaded image when loading from history
+    setUploadedImage(null);
     showToast(t.toastHistoryLoaded, 'success');
   };
 
@@ -462,6 +498,8 @@ const App: React.FC = () => {
             onWorkflowImport={handleWorkflowImport}
             uploadedImage={uploadedImage} 
             setUploadedImage={setUploadedImage} 
+            workflowFormat={workflowFormat}
+            setWorkflowFormat={setWorkflowFormat}
         />;
       case 'tester':
         return <TesterPanel onValidate={handleValidation} isLoading={loadingState.active} />;
@@ -534,6 +572,7 @@ const App: React.FC = () => {
             onLoad={handleLoadWorkflow}
             isLoading={loadingState.active && !!generatedData}
             loadingState={loadingState}
+            workflowFormat={workflowFormat}
           />
         </main>
         

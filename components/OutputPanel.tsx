@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import WorkflowVisualizer from './WorkflowVisualizer';
-import type { GeneratedWorkflowResponse, ValidationLogEntry, DebugLogEntry } from '../types';
+import type { GeneratedWorkflowResponse, ValidationLogEntry, DebugLogEntry, ComfyUIWorkflow, WorkflowFormat } from '../types';
 import { DownloadIcon, ClipboardIcon, PlayIcon, BugAntIcon, Square2StackIcon } from './Icons';
 import { useTranslations } from '../hooks/useTranslations';
 import ProgressBarLoader from './Loader';
@@ -14,16 +15,23 @@ interface OutputPanelProps {
   onLoad: () => void;
   isLoading?: boolean;
   loadingState?: { message: string, progress: number };
+  workflowFormat?: WorkflowFormat; // Receive format prop
 }
 
 type Tab = 'visualizer' | 'workflow' | 'requirements' | 'logs';
 
-const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, onDownload, onCopy, onRun, onValidate, onLoad, isLoading = false, loadingState = {message: '', progress: 0} }) => {
+const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, onDownload, onCopy, onRun, onValidate, onLoad, isLoading = false, loadingState = {message: '', progress: 0}, workflowFormat = 'graph' }) => {
   const [activeTab, setActiveTab] = useState<Tab>('visualizer');
   const t = useTranslations();
 
   useEffect(() => {
     if (workflowData) {
+      // If API format, default to 'workflow' tab because visualizer doesn't work
+      if (workflowFormat === 'api') {
+          setActiveTab('workflow');
+          return;
+      }
+
       const { validationLog, correctionLog } = workflowData;
       const hasCorrectionsOrErrors = (validationLog && validationLog.some(l => l.status === 'corrected' || l.status === 'failed')) || (correctionLog && correctionLog.length > 0);
       
@@ -35,7 +43,7 @@ const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, onDownload, onC
     } else {
         setActiveTab('visualizer');
     }
-  }, [workflowData]);
+  }, [workflowData, workflowFormat]);
 
   if (!workflowData) {
     return (
@@ -110,8 +118,10 @@ const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, onDownload, onC
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
+              // Disable Visualizer tab if API format is used
+              disabled={tab.key === 'visualizer' && workflowFormat === 'api'}
               className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all duration-300 ${
-                activeTab === tab.key ? 'bg-white text-teal-600 shadow-sm' : 'text-slate-500 hover:bg-white/50'
+                activeTab === tab.key ? 'bg-white text-teal-600 shadow-sm' : 'text-slate-500 hover:bg-white/50 disabled:opacity-40 disabled:cursor-not-allowed'
               }`}
             >
               {tab.label}
@@ -119,6 +129,7 @@ const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, onDownload, onC
           ))}
         </div>
         <div className="flex items-center space-x-2">
+            {/* Validate button mostly works with graph format logic, so maybe disable for API or warn? Keeping enabled for now. */}
             <button onClick={onValidate} title={t.tooltipValidate} disabled={isLoading} className="p-2.5 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 transition-colors disabled:opacity-50 border border-slate-200"><BugAntIcon className="w-5 h-5" /></button>
             <button onClick={onRun} title={t.tooltipRun} disabled={isLoading} className="p-2.5 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 transition-colors disabled:opacity-50 border border-slate-200"><PlayIcon className="w-5 h-5" /></button>
             <button onClick={onLoad} title={t.tooltipLoad} disabled={isLoading} className="p-2.5 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 transition-colors disabled:opacity-50 border border-slate-200"><Square2StackIcon className="w-5 h-5" /></button>
@@ -128,7 +139,19 @@ const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, onDownload, onC
       </div>
 
       <div className="flex-grow overflow-auto bg-white/50">
-        {activeTab === 'visualizer' && <WorkflowVisualizer workflow={workflow} />}
+        {activeTab === 'visualizer' && (
+            workflowFormat === 'graph' ? (
+                <WorkflowVisualizer workflow={workflow as ComfyUIWorkflow} />
+            ) : (
+                <div className="flex flex-col items-center justify-center h-full text-slate-500 p-8 text-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-16 h-16 mb-4 text-slate-300">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                    </svg>
+                    <h3 className="text-lg font-medium">{t.visualizerNotAvailable}</h3>
+                    <p className="text-sm mt-2">{t.visualizerNotAvailableSubtext}</p>
+                </div>
+            )
+        )}
         {activeTab === 'workflow' && (
           <pre className="text-xs p-4 text-slate-700 bg-slate-50 h-full font-mono">
             <code>{JSON.stringify(workflow, null, 2)}</code>

@@ -1,6 +1,6 @@
 
-import type { SystemInventory, GeneratedWorkflowResponse, ComfyUIWorkflow, ValidationResponse, DebugResponse } from '../types';
-import { SYSTEM_INSTRUCTION_TEMPLATE, SYSTEM_INSTRUCTION_VALIDATOR, SYSTEM_INSTRUCTION_DEBUGGER } from './prompts';
+import type { SystemInventory, GeneratedWorkflowResponse, ComfyUIWorkflow, ValidationResponse, DebugResponse, WorkflowFormat } from '../types';
+import { SYSTEM_INSTRUCTION_TEMPLATE, SYSTEM_INSTRUCTION_VALIDATOR, SYSTEM_INSTRUCTION_DEBUGGER, GRAPH_FORMAT_INSTRUCTION, API_FORMAT_INSTRUCTION } from './prompts';
 
 // --- Helper to extract JSON from LLM text response ---
 const extractJsonFromText = (text: string): any => {
@@ -69,7 +69,8 @@ export const generateWorkflowLocal = async (
     localLlmModel: string,
     inventory: SystemInventory | null, 
     imageName?: string,
-    ragApiUrl?: string // RAG/Helper URL
+    ragApiUrl?: string, // RAG/Helper URL
+    format: WorkflowFormat = 'graph'
 ): Promise<Omit<GeneratedWorkflowResponse, 'validationLog'>> => {
     if (!localLlmApiUrl) throw new Error("Ollama Generation URL is not configured.");
     if (!localLlmModel) throw new Error("Local LLM Model Name is not configured.");
@@ -115,11 +116,14 @@ ${JSON.stringify(inventory, null, 2)}
 `;
     }
 
+    const formatInstruction = format === 'api' ? API_FORMAT_INSTRUCTION : GRAPH_FORMAT_INSTRUCTION;
+
     // 4. Construct System Instruction
     const finalSystemInstruction = SYSTEM_INSTRUCTION_TEMPLATE
         .replace('{{RAG_CONTEXT_PLACEHOLDER}}', ragContextBlock)
         .replace('{{IMAGE_CONTEXT_PLACEHOLDER}}', imageContextBlock)
-        .replace('{{SYSTEM_INVENTORY_PLACEHOLDER}}', inventoryBlock);
+        .replace('{{SYSTEM_INVENTORY_PLACEHOLDER}}', inventoryBlock)
+        .replace('{{FORMAT_INSTRUCTION_PLACEHOLDER}}', formatInstruction);
 
     // 5. Call Local LLM (Using Generation URL)
     try {

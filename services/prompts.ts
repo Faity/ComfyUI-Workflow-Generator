@@ -15,39 +15,7 @@ You MUST generate a workflow that is compatible with the following system config
 This is the inventory of models available on the local system. You MUST use model filenames from this list when building the workflow.
 {{SYSTEM_INVENTORY_PLACEHOLDER}}
 
-**QUALITY ASSURANCE & RFC COMPLIANCE:**
-Before providing the final JSON, you MUST internally simulate and validate the workflow to ensure its logical and structural integrity.
- This is the most critical requirement.
- 1.  **Phase 1: Structural & Schema Validation:**
-    * The final workflow JSON must be syntactically correct.
- * It must strictly adhere to and validate against the latest known Zod schema for ComfyUI, ensuring all fields exist and have the correct data types (e.g., node IDs are numbers, seeds are integers not strings).
- 2.  **Phase 2: Graph & Connectivity Validation:**
-    * **Consistency:** The main \`links\` array is the source of truth.
- The \`links\` properties within each node's \`inputs\` and \`outputs\` arrays must be a perfect reflection of the main \`links\` array.
- * **Complete Connectivity:** Every required input on every node MUST be connected.
- There can be no missing links for mandatory inputs (e.g., a KSampler's 'model', 'positive', 'negative', and 'latent_image' inputs).
- * **Type Compatibility:** For every link, the output slot type MUST match the input slot type (e.g., 'MODEL' to 'MODEL', 'LATENT' to 'LATENT').
- * **No Orphans:** The workflow MUST have a clear, uninterrupted path from a starting node (e.g., a loader) to an ending node (e.g., SaveImage).
-
-    **Definition des Link-Formats (WICHTIG):**
-    Jede Verbindung zwischen Nodes MUSS im globalen \`links\`-Array definiert werden. Jedes Element im \`links\`-Array ist selbst ein Array (ein Tupel) mit exakt 6 Elementen:
-
-    \`[link_id, source_node_id, source_slot_index, target_node_id, target_slot_index, "SLOT_TYPE"]\`
-
-    * \`link_id\`: (Nummer) Eindeutige ID für diesen Link (muss global eindeutig sein).
-    * \`source_node_id\`: (Nummer) Die \`id\` des Nodes, von dem der Link *ausgeht*.
-    * \`source_slot_index\`: (Nummer) Der Index des *Ausgabe*-Slots am Quell-Node (beginnend bei 0).
-    * \`target_node_id\`: (Nummer) Die \`id\` des Nodes, an dem der Link *ankommt*.
-    * \`target_slot_index\`: (Nummer) Der Index des *Eingabe*-Slots am Ziel-Node (beginnend bei 0).
-    * \`"SLOT_TYPE"\`: (String) Der Datentyp der Verbindung (z.B. "MODEL", "LATENT", "VAE", "IMAGE", "CONDITIONING").
-
-    **Du MUSST** dieses Format strikt einhalten und sicherstellen, dass alle obligatorischen Inputs durch einen Eintrag in diesem \`links\`-Array verbunden sind. Der \`last_link_id\`-Wert im Workflow-Stamm muss der höchsten verwendeten \`link_id\` entsprechen.
-
-3.  **Phase 3: Semantic & Logical Validation:**
-    * **Plausibility:** Check key widget values.
- For example, a KSampler's \`cfg\` value must be greater than 1.0 (a value of 0 is an error).
- Sampler and scheduler names must be valid. Latent image dimensions should be divisible by 8.
-    * **RFC Adherence:** The workflow must comply with the standards in the official ComfyUI RFCs (see https://github.com/Comfy-Org/rfcs).
+{{FORMAT_INSTRUCTION_PLACEHOLDER}}
 
 **WICHTIGE SCHEMA-REGELN FÜR ALLE COMFYUI-WORKFLOWS:**
 
@@ -85,7 +53,7 @@ Halte dich bei JEDER Generierung strikt an diese Regeln.
 Your response MUST be ONLY a single, raw, valid JSON object that can be directly parsed.
  Do NOT include any explanatory text, comments, or markdown code fences like \`\`\`json.
  This JSON object MUST have two top-level keys: "workflow" and "requirements".
- 1.  **"workflow"**: This key must contain the complete ComfyUI workflow JSON object, with all the standard keys ("last_node_id", "nodes", etc.).
+ 1.  **"workflow"**: This key must contain the complete ComfyUI workflow JSON object, adhering to the requested format (Graph or API).
  2.  **"requirements"**: This key must contain an object detailing the necessary components for the workflow to run.
  It should have two keys: "custom_nodes" and "models".
      * **"custom_nodes"**: An array of objects, where each object represents a required custom node.
@@ -98,44 +66,100 @@ Your response MUST be ONLY a single, raw, valid JSON object that can be directly
  * \`url\`: (string | null) The direct download URL. Set to null if unknown.
  * \`model_type\`: (string) The type of model (e.g., "checkpoint", "vae", "lora").
  * \`install_path\`: (string | null) The relative path from the ComfyUI root directory where the model file should be placed (e.g., "models/checkpoints/", "models/loras/", or a custom node specific path like "custom_nodes/ComfyUI-AnimateDiff-Evolved/models/").
+`;
 
-Example of the final JSON output structure:
+export const GRAPH_FORMAT_INSTRUCTION = `
+**QUALITY ASSURANCE & COMPLIANCE (GRAPH FORMAT):**
+Before providing the final JSON, you MUST internally simulate and validate the workflow to ensure its logical and structural integrity.
+ This is the most critical requirement.
+ 1.  **Phase 1: Structural & Schema Validation:**
+    * The final workflow JSON must be syntactically correct.
+ * It must strictly adhere to and validate against the latest known Zod schema for ComfyUI, ensuring all fields exist and have the correct data types (e.g., node IDs are numbers, seeds are integers not strings).
+ 2.  **Phase 2: Graph & Connectivity Validation:**
+    * **Consistency:** The main \`links\` array is the source of truth.
+ The \`links\` properties within each node's \`inputs\` and \`outputs\` arrays must be a perfect reflection of the main \`links\` array.
+ * **Complete Connectivity:** Every required input on every node MUST be connected.
+ There can be no missing links for mandatory inputs (e.g., a KSampler's 'model', 'positive', 'negative', and 'latent_image' inputs).
+ * **Type Compatibility:** For every link, the output slot type MUST match the input slot type (e.g., 'MODEL' to 'MODEL', 'LATENT' to 'LATENT').
+ * **No Orphans:** The workflow MUST have a clear, uninterrupted path from a starting node (e.g., a loader) to an ending node (e.g., SaveImage).
+
+    **Definition des Link-Formats (WICHTIG):**
+    Jede Verbindung zwischen Nodes MUSS im globalen \`links\`-Array definiert werden. Jedes Element im \`links\`-Array ist selbst ein Array (ein Tupel) mit exakt 6 Elementen:
+
+    \`[link_id, source_node_id, source_slot_index, target_node_id, target_slot_index, "SLOT_TYPE"]\`
+
+    * \`link_id\`: (Nummer) Eindeutige ID für diesen Link (muss global eindeutig sein).
+    * \`source_node_id\`: (Nummer) Die \`id\` des Nodes, von dem der Link *ausgeht*.
+    * \`source_slot_index\`: (Nummer) Der Index des *Ausgabe*-Slots am Quell-Node (beginnend bei 0).
+    * \`target_node_id\`: (Nummer) Die \`id\` des Nodes, an dem der Link *ankommt*.
+    * \`target_slot_index\`: (Nummer) Der Index des *Eingabe*-Slots am Ziel-Node (beginnend bei 0).
+    * \`"SLOT_TYPE"\`: (String) Der Datentyp der Verbindung (z.B. "MODEL", "LATENT", "VAE", "IMAGE", "CONDITIONING").
+
+    **Du MUSST** dieses Format strikt einhalten und sicherstellen, dass alle obligatorischen Inputs durch einen Eintrag in diesem \`links\`-Array verbunden sind. Der \`last_link_id\`-Wert im Workflow-Stamm muss der höchsten verwendeten \`link_id\` entsprechen.
+
+3.  **Phase 3: Semantic & Logical Validation:**
+    * **Plausibility:** Check key widget values.
+ For example, a KSampler's \`cfg\` value must be greater than 1.0 (a value of 0 is an error).
+ Sampler and scheduler names must be valid. Latent image dimensions should be divisible by 8.
+    * **RFC Adherence:** The workflow must comply with the standards in the official ComfyUI RFCs (see https://github.com/Comfy-Org/rfcs).
+    * **Node Positioning:** Place nodes in a logical left-to-right flow in the 'pos' array, starting around [100, 100].
+
+**OUTPUT STRUCTURE:**
+The \`workflow\` object MUST follow the standard ComfyUI Graph structure with "nodes", "links", "groups", "version", etc.
+`;
+
+export const API_FORMAT_INSTRUCTION = `
+**QUALITY ASSURANCE & COMPLIANCE (API FORMAT):**
+You MUST generate the workflow in the **ComfyUI API (Prompt) format**.
+This is NOT the visual graph format used in the GUI. Do NOT generate "links", "groups", or "pos" arrays.
+
+**Structure of API Format:**
+The \`workflow\` object must be a dictionary where:
+- **Keys**: Are Node IDs (strings, e.g., "1", "2").
+- **Values**: Are objects with two required keys:
+  1. \`class_type\`: (string) The class name of the node (e.g., "KSampler", "CheckpointLoaderSimple").
+  2. \`inputs\`: (object) A dictionary of input parameters for that node.
+
+**Defining Connections in API Format:**
+Connections between nodes are defined inside the \`inputs\` object.
+- If an input is a value (string, number, boolean), provide the value directly.
+- If an input is a connection from another node, provide it as an array with two elements: \`["SOURCE_NODE_ID", SOURCE_OUTPUT_SLOT_INDEX]\`.
+
+**Example of API Format:**
 \`\`\`json
 {
   "workflow": {
-    "last_node_id": 4,
-    "last_link_id": 3,
-    "nodes": [ /* ... node objects ... */ ],
-    "links": [ /* ... link arrays ... */ ],
-    "groups": [],
-    "config": {},
-    "extra": {},
-    "version": 0.4
+    "3": {
+      "class_type": "KSampler",
+      "inputs": {
+        "seed": 156680208700286,
+        "steps": 20,
+        "cfg": 8,
+        "sampler_name": "euler",
+        "scheduler": "normal",
+        "denoise": 1,
+        "model": ["4", 0],       // Connects to Node 4, Output Slot 0
+        "positive": ["6", 0],    // Connects to Node 6, Output Slot 0
+        "negative": ["7", 0],    // Connects to Node 7, Output Slot 0
+        "latent_image": ["5", 0] // Connects to Node 5, Output Slot 0
+      }
+    },
+    "4": {
+      "class_type": "CheckpointLoaderSimple",
+      "inputs": {
+        "ckpt_name": "v1-5-pruned-emaonly.ckpt"
+      }
+    },
+    /* ... more nodes ... */
   },
-  "requirements": {
-    "custom_nodes": [
-      {
-        "name": "ComfyUI-Impact-Pack",
-
-         "url": "https://github.com/ltdrdata/ComfyUI-Impact-Pack",
-        "install_instructions": "git clone https://github.com/ltdrdata/ComfyUI-Impact-Pack\\npip install -r ComfyUI-Impact-Pack/requirements.txt"
-      }
-    ],
-    "models": [
-      {
-        "name": "sd_xl_base_1.0.safetensors",
-        "url": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/blob/main/sd_xl_base_1.0.safetensors",
-        "model_type": "checkpoint",
-        "install_path": "models/checkpoints/"
-      }
-    ]
-  }
+  "requirements": { /* ... standard requirements object ... */ }
 }
 \`\`\`
 
-When arranging nodes in the workflow, place them in a logical
- left-to-right flow in the 'pos' array, starting around [100, 100] and increasing the x-coordinate for subsequent nodes to create a readable graph.
- Assign meaningful titles to nodes via the 'title' property where applicable.
+**Validation Rules:**
+1. Ensure every Node ID used in a connection (e.g., ["4", 0]) actually exists as a key in the main object.
+2. Ensure \`class_type\` names are exact matches for standard ComfyUI nodes.
+3. Do NOT include visual positioning data or link IDs. This is purely logical.
 `;
 
 export const SYSTEM_INSTRUCTION_VALIDATOR = `You are a ComfyUI Workflow Analyzer and Corrector. Your task is to receive a ComfyUI workflow JSON, meticulously analyze it for correctness and logical consistency, and then return a corrected version along with a validation log.
