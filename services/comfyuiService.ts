@@ -1,4 +1,5 @@
 
+
 import { v4 as uuidv4 } from 'uuid';
 import type { ComfyUIWorkflow, ComfyUIImageUploadResponse, ComfyUIImage } from '../types';
 
@@ -97,9 +98,10 @@ export const executeWorkflow = async (
             try {
                 const errJson = JSON.parse(errorBody);
                 if (errJson.error && errJson.node_errors) {
-                     const nodeErrors = Object.entries(errJson.node_errors).map(([k, v]: any) => 
-                        `Node ${k} (${v.class_type}): ${v.errors.map((e: any) => e.message).join(', ')}`
-                     ).join('\n');
+                     const nodeErrors = Object.entries(errJson.node_errors).map(([k, v]: any) => {
+                        const errors = Array.isArray(v.errors) ? v.errors.map((e: any) => e.message).join(', ') : 'Unknown error';
+                        return `Node ${k} (${v.class_type}): ${errors}`;
+                     }).join('\n');
                      throw new Error(`ComfyUI Validation Error:\n${nodeErrors}`);
                 }
             } catch (parseErr) {
@@ -130,7 +132,23 @@ export const executeWorkflow = async (
         const wsUrl = `${wsProtocol}//${url.host}/ws?clientId=${clientId}`;
         const ws = new WebSocket(wsUrl);
         
-        const nodesById = new Map(workflow.nodes.map(node => [String(node.id), node.title || node.type]));
+        // SAFE NODE MAPPING (Handling both Graph and API formats)
+        let nodesById = new Map<string, string>();
+        if (workflow && typeof workflow === 'object' && 'nodes' in workflow && Array.isArray((workflow as any).nodes)) {
+             // Graph Format
+             nodesById = new Map((workflow as any).nodes.map((node: any) => [String(node.id), node.title || node.type]));
+        } else if (workflow && typeof workflow === 'object') {
+             // API Format: { "id": { class_type: "..." } }
+             try {
+                Object.entries(workflow).forEach(([id, node]: [string, any]) => {
+                    if (node && node.class_type) {
+                        nodesById.set(id, node._meta?.title || node.class_type);
+                    }
+                });
+             } catch (e) {
+                 console.warn("Could not map nodes for progress display (API format)", e);
+             }
+        }
 
         ws.onmessage = (event) => {
             if (typeof event.data !== 'string') return;
@@ -154,7 +172,8 @@ export const executeWorkflow = async (
             
             if (data.type === 'executed' && data.data.prompt_id === promptId) {
                 const output = data.data.output;
-                if (output && output.images) {
+                // Safety check for output images array
+                if (output && output.images && Array.isArray(output.images)) {
                     generatedImages.push(...output.images);
                 }
             }
@@ -212,9 +231,17 @@ export const validateWorkflowAgainstApi = async (
                 // Handle specific Node Errors (common in ComfyUI validation)
                 if (errJson.node_errors && Object.keys(errJson.node_errors).length > 0) {
                     const details = Object.entries(errJson.node_errors).map(([nodeId, errorData]: any) => {
-                         const nodeTitle = workflow.nodes.find(n => String(n.id) === String(nodeId))?.title || `Node ${nodeId}`;
+                         // Safe check for graph format vs api format title lookup
+                         let nodeTitle = `Node ${nodeId}`;
+                         if ('nodes' in workflow && Array.isArray((workflow as any).nodes)) {
+                             const found = (workflow as any).nodes.find((n:any) => String(n.id) === String(nodeId));
+                             if (found) nodeTitle = found.title || found.type || nodeTitle;
+                         }
+
                          const classType = errorData.class_type;
-                         const messages = errorData.errors.map((e: any) => e.message).join(', ');
+                         const messages = Array.isArray(errorData.errors) 
+                            ? errorData.errors.map((e: any) => e.message).join(', ')
+                            : 'Unknown error';
                          return `Error in '${nodeTitle}' (${classType}): ${messages}`;
                     }).join('\n');
                     errorMessage = `ComfyUI Validation Failed:\n${details}`;
