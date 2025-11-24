@@ -309,6 +309,46 @@ export const queryRag = async (prompt: string, apiUrl: string, model?: string): 
     }
 };
 
+export const learnWorkflow = async (
+    type: 'short' | 'promote', 
+    prompt: string, 
+    workflow: ComfyUIWorkflow | ComfyUIApiWorkflow, 
+    apiUrl: string
+): Promise<{ message: string }> => {
+    // Construct the "Rich Description" format
+    const richContent = `
+--- SUCCESSFUL WORKFLOW EXECUTION ---
+PROMPT: ${prompt}
+WORKFLOW: ${JSON.stringify(workflow)}
+`;
+
+    // Map 'promote' to the correct endpoint path segment if necessary, or just use type directly if endpoints match.
+    // Assuming endpoints are /v1/rag/learn/short and /v1/rag/learn/promote
+    const endpoint = new URL(`/v1/rag/learn/${type}`, apiUrl).toString();
+    
+    try {
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                text: richContent,
+                metadata: { source: "user-feedback", type: "workflow-success" }
+            }),
+        });
+
+        if (!response.ok) {
+             const errorData = await response.json().catch(() => ({ detail: response.statusText }));
+             throw new Error(`Learning API error (${response.status}): ${errorData.detail}`);
+        }
+        return await response.json();
+    } catch (error) {
+         if (error instanceof TypeError) {
+            throw new Error(`Failed to connect to Learning API at ${apiUrl}.`);
+        }
+        throw error;
+    }
+};
+
 export const startFineTuning = async (trainingData: string, apiUrl: string): Promise<{ job_id: string }> => {
     const endpoint = new URL('/v1/finetune', apiUrl).toString();
     try {

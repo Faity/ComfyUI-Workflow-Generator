@@ -1,10 +1,12 @@
 
+
 import React, { useState, useEffect } from 'react';
 import WorkflowVisualizer from './WorkflowVisualizer';
 import type { GeneratedWorkflowResponse, ValidationLogEntry, DebugLogEntry, ComfyUIWorkflow, WorkflowFormat } from '../types';
-import { DownloadIcon, ClipboardIcon, PlayIcon, BugAntIcon, Square2StackIcon } from './Icons';
+import { DownloadIcon, ClipboardIcon, PlayIcon, BugAntIcon, Square2StackIcon, SparklesIcon, DatabaseIcon } from './Icons';
 import { useTranslations } from '../hooks/useTranslations';
 import ProgressBarLoader from './Loader';
+import { learnWorkflow } from '../services/localLlmService';
 
 interface OutputPanelProps {
   workflowData: GeneratedWorkflowResponse | null;
@@ -15,18 +17,98 @@ interface OutputPanelProps {
   onLoad: () => void;
   isLoading?: boolean;
   loadingState?: { message: string, progress: number };
-  workflowFormat?: WorkflowFormat; // Receive format prop
+  workflowFormat?: WorkflowFormat;
+  lastRunSuccess?: boolean;
+  currentPrompt?: string;
+  ragApiUrl?: string;
+  showToast?: (message: string, type: 'success' | 'error') => void;
 }
 
 type Tab = 'visualizer' | 'workflow' | 'requirements' | 'logs';
 
-const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, onDownload, onCopy, onRun, onValidate, onLoad, isLoading = false, loadingState = {message: '', progress: 0}, workflowFormat = 'graph' }) => {
+const FeedbackBar: React.FC<{ 
+    prompt: string, 
+    workflow: any, 
+    apiUrl: string, 
+    onToast: (msg: string, type: 'success'|'error') => void 
+}> = ({ prompt, workflow, apiUrl, onToast }) => {
+    const t = useTranslations();
+    const [saving, setSaving] = useState<'short' | 'gold' | null>(null);
+    const [saved, setSaved] = useState(false);
+
+    const handleSave = async (type: 'short' | 'promote') => {
+        if (!apiUrl) return;
+        setSaving(type === 'short' ? 'short' : 'gold');
+        try {
+            // Using the actual prompt and workflow for RAG learning
+            await learnWorkflow(type, prompt, workflow, apiUrl);
+            setSaved(true);
+            onToast(t.toastLearnSuccess, 'success');
+        } catch (e: any) {
+            onToast(t.toastLearnError + ': ' + e.message, 'error');
+        } finally {
+            setSaving(null);
+        }
+    };
+
+    if (saved) return null; // Hide after saving
+
+    return (
+        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-teal-100 p-4 flex flex-col md:flex-row items-center justify-between gap-4 animate-fade-in">
+            <div className="flex items-start space-x-3">
+                 <div className="bg-teal-100 p-2 rounded-full text-teal-600">
+                    <SparklesIcon className="w-5 h-5" />
+                 </div>
+                 <div>
+                     <h4 className="font-bold text-teal-900">{t.feedbackTitle}</h4>
+                     <p className="text-sm text-teal-700">{t.feedbackSubtext}</p>
+                 </div>
+            </div>
+            <div className="flex space-x-2 flex-shrink-0">
+                <button 
+                    onClick={() => handleSave('short')}
+                    disabled={!!saving}
+                    className="px-3 py-1.5 text-xs font-semibold bg-white text-teal-700 border border-teal-200 rounded-lg hover:bg-teal-50 transition-colors shadow-sm flex items-center"
+                >
+                    {saving === 'short' ? t.learningSaving : t.btnAutoSave}
+                </button>
+                <button 
+                    onClick={() => handleSave('promote')}
+                    disabled={!!saving}
+                    className="px-3 py-1.5 text-xs font-semibold bg-teal-600 text-white border border-teal-600 rounded-lg hover:bg-teal-700 transition-colors shadow-sm flex items-center"
+                >
+                     {saving === 'gold' ? t.learningSaving : (
+                         <>
+                            <DatabaseIcon className="w-3 h-3 mr-1" />
+                            {t.btnGoldStandard}
+                         </>
+                     )}
+                </button>
+            </div>
+        </div>
+    );
+}
+
+const OutputPanel: React.FC<OutputPanelProps> = ({ 
+    workflowData, 
+    onDownload, 
+    onCopy, 
+    onRun, 
+    onValidate, 
+    onLoad, 
+    isLoading = false, 
+    loadingState = {message: '', progress: 0}, 
+    workflowFormat = 'graph',
+    lastRunSuccess = false,
+    currentPrompt = '',
+    ragApiUrl = '',
+    showToast = () => {}
+}) => {
   const [activeTab, setActiveTab] = useState<Tab>('visualizer');
   const t = useTranslations();
 
   useEffect(() => {
     if (workflowData) {
-      // If API format, default to 'workflow' tab because visualizer doesn't work
       if (workflowFormat === 'api') {
           setActiveTab('workflow');
           return;
@@ -112,6 +194,17 @@ const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, onDownload, onC
 
   return (
     <div className="relative w-full lg:w-1/2 glass-panel rounded-2xl flex flex-col overflow-hidden">
+      
+      {/* Feedback Bar for Successful Runs */}
+      {lastRunSuccess && ragApiUrl && (
+          <FeedbackBar 
+            prompt={currentPrompt || ''} 
+            workflow={workflow} 
+            apiUrl={ragApiUrl}
+            onToast={showToast}
+          />
+      )}
+
       <div className="flex-shrink-0 p-3 flex justify-between items-center border-b border-slate-200">
         <div className="flex space-x-1 bg-slate-100 p-1 rounded-full border border-slate-200">
           {tabConfig.map(tab => (
@@ -129,7 +222,6 @@ const OutputPanel: React.FC<OutputPanelProps> = ({ workflowData, onDownload, onC
           ))}
         </div>
         <div className="flex items-center space-x-2">
-            {/* Validate button mostly works with graph format logic, so maybe disable for API or warn? Keeping enabled for now. */}
             <button onClick={onValidate} title={t.tooltipValidate} disabled={isLoading} className="p-2.5 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 transition-colors disabled:opacity-50 border border-slate-200"><BugAntIcon className="w-5 h-5" /></button>
             <button onClick={onRun} title={t.tooltipRun} disabled={isLoading} className="p-2.5 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 transition-colors disabled:opacity-50 border border-slate-200"><PlayIcon className="w-5 h-5" /></button>
             <button onClick={onLoad} title={t.tooltipLoad} disabled={isLoading} className="p-2.5 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 transition-colors disabled:opacity-50 border border-slate-200"><Square2StackIcon className="w-5 h-5" /></button>

@@ -1,4 +1,5 @@
 
+
 export const translations = {
   en: {
     locale: 'en-US',
@@ -42,6 +43,8 @@ export const translations = {
     toastWorkflowExecutionFailed: (error: string) => `Workflow execution failed: ${error}`,
     toastJsonImported: 'Workflow JSON imported successfully!',
     toastJsonImportFailed: 'Failed to import JSON. Invalid format.',
+    toastLearnSuccess: 'Knowledge saved successfully!',
+    toastLearnError: 'Failed to save knowledge.',
 
     // InputPanel.tsx
     describeWorkflow: 'Describe Your Workflow',
@@ -86,6 +89,13 @@ export const translations = {
     reasoning: 'Reasoning:',
     visualizerNotAvailable: 'Visualizer Not Available',
     visualizerNotAvailableSubtext: 'The visualizer is only available for Graph-format workflows. You generated an API-format workflow.',
+    
+    // Feedback / Learning
+    feedbackTitle: 'Success! Save this knowledge?',
+    feedbackSubtext: 'The workflow ran successfully. Save it to the AI knowledge base to improve future results.',
+    btnAutoSave: 'Auto-Save (Short-Term)',
+    btnGoldStandard: 'Gold Standard (Long-Term)',
+    learningSaving: 'Saving...',
 
     // TesterPanel.tsx
     testerTitle: 'Validate & Correct Workflow',
@@ -233,6 +243,8 @@ export const translations = {
     toastWorkflowExecutionFailed: (error: string) => `Workflow-Ausführung fehlgeschlagen: ${error}`,
     toastJsonImported: 'Workflow JSON erfolgreich importiert!',
     toastJsonImportFailed: 'JSON-Import fehlgeschlagen. Ungültiges Format.',
+    toastLearnSuccess: 'Wissen erfolgreich gespeichert!',
+    toastLearnError: 'Fehler beim Speichern des Wissens.',
     
     // InputPanel.tsx
     describeWorkflow: 'Beschreiben Sie Ihren Workflow',
@@ -277,6 +289,13 @@ export const translations = {
     reasoning: 'Begründung:',
     visualizerNotAvailable: 'Visualisierung nicht verfügbar',
     visualizerNotAvailableSubtext: 'Der Visualizer ist nur für Workflows im Graph-Format verfügbar. Sie haben einen Workflow im API-Format generiert.',
+
+    // Feedback / Learning
+    feedbackTitle: 'Erfolg! Wissen speichern?',
+    feedbackSubtext: 'Der Workflow lief erfolgreich durch. Speichern Sie ihn in der KI-Wissensdatenbank, um zukünftige Ergebnisse zu verbessern.',
+    btnAutoSave: 'Auto-Save (Kurzzeit)',
+    btnGoldStandard: 'Gold-Standard (Langzeit)',
+    learningSaving: 'Speichere...',
 
     // TesterPanel.tsx
     testerTitle: 'Workflow validieren & korrigieren',

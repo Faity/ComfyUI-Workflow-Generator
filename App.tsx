@@ -48,6 +48,7 @@ const App: React.FC = () => {
   });
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastState[]>([]);
+  const [lastRunSuccess, setLastRunSuccess] = useState<boolean>(false); // Track execution success for feedback loop
   
   // Modals
   const [isOptimizerOpen, setIsOptimizerOpen] = useState(false);
@@ -151,6 +152,7 @@ const App: React.FC = () => {
     if (!ensureApiKey() || !prompt.trim()) return;
     setGeneratedData(null);
     setSelectedHistoryId(null);
+    setLastRunSuccess(false); // Reset feedback state
     let finalData: GeneratedWorkflowResponse | null = null;
     let uploadedImageName: string | undefined = undefined;
 
@@ -280,6 +282,7 @@ const App: React.FC = () => {
       setWorkflowFormat(format);
       setGeneratedData(importData);
       setSelectedHistoryId(null);
+      setLastRunSuccess(false);
       showToast(t.toastJsonImported, 'success');
   };
 
@@ -355,6 +358,7 @@ const App: React.FC = () => {
     }
     
     setLoadingState({ active: true, message: t.toastSendingWorkflow, progress: 0 });
+    setLastRunSuccess(false);
 
     // executeWorkflow handles graph->api conversion if needed.
     // If it's already API format (workflowFormat === 'api'), convertToApiFormat in comfyuiService 
@@ -368,6 +372,7 @@ const App: React.FC = () => {
       },
       () => { // onComplete
         showToast(t.toastWorkflowExecutionComplete, 'success');
+        setLastRunSuccess(true); // Trigger feedback loop UI
         setTimeout(() => {
             setLoadingState({ active: false, message: '', progress: 0 });
         }, 1500);
@@ -387,6 +392,7 @@ const App: React.FC = () => {
     setWorkflowFormat(entry.format || 'graph');
     setMainView('generator');
     setUploadedImage(null);
+    setLastRunSuccess(false); // Reset feedback on history load
     showToast(t.toastHistoryLoaded, 'success');
   };
 
@@ -564,6 +570,10 @@ const App: React.FC = () => {
             isLoading={loadingState.active && !!generatedData}
             loadingState={loadingState}
             workflowFormat={workflowFormat}
+            lastRunSuccess={lastRunSuccess}
+            currentPrompt={prompt}
+            ragApiUrl={ragApiUrl}
+            showToast={showToast}
           />
         </main>
         
