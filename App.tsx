@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 // FIX: Corrected import alias for uuid v4 to match usage.
 import { v4 as uuidv4 } from 'uuid';
@@ -15,7 +14,7 @@ import WorkflowWizardModal from './components/WorkflowWizardModal';
 import SettingsModal from './components/SettingsModal';
 // ApiKeyModal is no longer needed as we use .env
 import { generateWorkflow, validateAndCorrectWorkflow, debugAndCorrectWorkflow } from './services/geminiService';
-import { executeWorkflow, uploadImage } from './services/comfyuiService';
+import { executeWorkflow, uploadImage, validateWorkflowAgainstApi } from './services/comfyuiService';
 import { getServerInventory, generateWorkflowLocal, validateAndCorrectWorkflowLocal, debugAndCorrectWorkflowLocal } from './services/localLlmService';
 import { initializeApiKey } from './services/apiKeyService';
 import type { GeneratedWorkflowResponse, HistoryEntry, ComfyUIWorkflow, SystemInventory, LlmProvider } from './types';
@@ -188,7 +187,7 @@ const App: React.FC = () => {
       }
       
       // Step 2: Validation
-      setLoadingState({ active: true, message: t.loadingStep2, progress: 75 });
+      setLoadingState({ active: true, message: t.loadingStep2, progress: 60 });
       
       let validatedResponse;
       if (llmProvider === 'local') {
@@ -202,7 +201,42 @@ const App: React.FC = () => {
         workflow: validatedResponse.correctedWorkflow,
         requirements: response.requirements,
         validationLog: validatedResponse.validationLog,
+        correctionLog: [], // Initialize empty
       };
+
+      // Step 3: Server-side Validation with Auto-Correction (NEW)
+      if (comfyUIUrl) {
+          setLoadingState({ active: true, message: t.loadingServerValidation, progress: 85 });
+          try {
+              // Attempt to send to ComfyUI to see if it accepts it
+              const serverValidation = await validateWorkflowAgainstApi(finalData.workflow, comfyUIUrl);
+
+              if (!serverValidation.success && serverValidation.error) {
+                   // It failed! Let's debug it automatically.
+                   console.log("Server validation failed. Starting auto-correction...", serverValidation.error);
+                   setLoadingState({ active: true, message: t.loadingAutoCorrecting, progress: 90 });
+                   
+                   let debugResponse;
+                   if (llmProvider === 'local') {
+                        debugResponse = await debugAndCorrectWorkflowLocal(finalData.workflow, serverValidation.error, localLlmApiUrl, localLlmModel, ragApiUrl);
+                   } else {
+                        debugResponse = await debugAndCorrectWorkflow(finalData.workflow, serverValidation.error, ragApiUrl, localLlmModel);
+                   }
+                   
+                   // Update the workflow with the fixed version
+                   finalData.workflow = debugResponse.correctedWorkflow;
+                   // Append corrections to logs so the user sees what happened
+                   finalData.correctionLog = debugResponse.correctionLog;
+                   
+                   showToast(t.toastAutoCorrected, 'success');
+              } else if (serverValidation.success) {
+                  // If it succeeded, it technically queued the prompt. 
+                  // We consider this a successful "Dry Run".
+              }
+          } catch (e) {
+              console.warn("Server validation check failed (network error?), skipping auto-debug.", e);
+          }
+      }
 
       setLoadingState({ active: true, message: t.loadingComplete, progress: 100 });
       setGeneratedData(finalData);

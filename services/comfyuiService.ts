@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import type { ComfyUIWorkflow, ComfyUIImageUploadResponse } from '../types';
 
@@ -21,14 +22,37 @@ const getNetworkError = (error: TypeError, apiUrl: string, context: string): Err
     return new Error(message);
 };
 
+/**
+ * Helper function to convert a GUI workflow to API format.
+ * Tries to use the server's /workflow/convert endpoint (if available via helper nodes),
+ * otherwise falls back to using the workflow as-is (which works if the prompt format is close enough).
+ */
+const convertToApiFormat = async (workflow: ComfyUIWorkflow, apiUrl: string): Promise<any> => {
+    try {
+        // Try to convert using the server endpoint (common with some custom nodes/extensions)
+        const convertEndpoint = new URL('/workflow/convert', apiUrl).toString();
+        const convertResponse = await fetch(convertEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(workflow),
+        });
+
+        if (convertResponse.ok) {
+            return await convertResponse.json();
+        }
+    } catch (e) {
+        // Ignore network errors during conversion attempt and fall back
+        console.warn("Could not reach /workflow/convert endpoint. Using raw workflow.", e);
+    }
+    
+    // Fallback: Return original. ComfyUI API expects 'prompt' format, but sometimes 
+    // the graph format works depending on the endpoint used or if it's already in prompt format.
+    return workflow;
+};
+
 
 /**
  * Sends a workflow to a ComfyUI instance and listens for real-time progress via WebSocket.
- * @param workflow The ComfyUI workflow object.
- * @param apiUrl The base URL of the ComfyUI API (e.g., http://127.0.0.1:8188).
- * @param onProgress Callback function to report progress updates.
- * @param onComplete Callback function invoked when the workflow execution is finished.
- * @param onError Callback function to report any errors during the process.
  */
 export const executeWorkflow = async (
   workflow: ComfyUIWorkflow,
@@ -39,35 +63,21 @@ export const executeWorkflow = async (
 ): Promise<void> => {
     const clientId = uuidv4();
     let promptId: string;
-    let apiWorkflow = workflow; // Standard: Wir versuchen das Original
-
+    
+    onProgress({ message: 'Konvertiere Workflow in API-Format...', progress: 5 });
+    
     // --- SCHRITT 1: KONVERTIERUNG (GUI -> API) ---
+    let apiWorkflow;
     try {
-        onProgress({ message: 'Konvertiere Workflow in API-Format...', progress: 5 });
-        
-        // Wir senden den GUI-Workflow an den Helfer-Endpunkt auf dem Server
-        const convertEndpoint = new URL('/workflow/convert', apiUrl).toString();
-        
-        const convertResponse = await fetch(convertEndpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(workflow),
-        });
-
-        if (convertResponse.ok) {
-            // Erfolg! Wir haben das korrekte API-Format erhalten
-            apiWorkflow = await convertResponse.json();
-            console.log("Workflow erfolgreich konvertiert.");
-        } else {
-            console.warn("Konvertierung fehlgeschlagen (Server hat kein /workflow/convert?). Versuche Original.");
-        }
+        apiWorkflow = await convertToApiFormat(workflow, apiUrl);
     } catch (e) {
-        console.warn("Konnte Konvertierungs-Endpunkt nicht erreichen.", e);
+        console.warn("Conversion failed locally, using original.", e);
+        apiWorkflow = workflow;
     }
 
     // --- SCHRITT 2: AUSFÜHRUNG (API-Format senden) ---
     const payload = {
-        prompt: apiWorkflow, // Hier senden wir jetzt das konvertierte Format!
+        prompt: apiWorkflow, 
         client_id: clientId,
     };
 
@@ -81,15 +91,34 @@ export const executeWorkflow = async (
 
         if (!response.ok) {
             const errorBody = await response.text();
+            
+            // Try to parse nicer error
+            try {
+                const errJson = JSON.parse(errorBody);
+                if (errJson.error && errJson.node_errors) {
+                     const nodeErrors = Object.entries(errJson.node_errors).map(([k, v]: any) => 
+                        `Node ${k} (${v.class_type}): ${v.errors.map((e: any) => e.message).join(', ')}`
+                     ).join('\n');
+                     throw new Error(`ComfyUI Validation Error:\n${nodeErrors}`);
+                }
+            } catch (parseErr) {
+                // Ignore parse error, throw original body
+            }
+            
             throw new Error(`ComfyUI API error (${response.status}):\n${errorBody}`);
         }
+        
         const jsonResponse = await response.json();
         if (jsonResponse.error) {
             throw new Error(`ComfyUI prompt error: ${jsonResponse.error.type} - ${jsonResponse.message}`);
         }
         promptId = jsonResponse.prompt_id;
     } catch (error: any) {
-        onError(error);
+        if (error instanceof TypeError) {
+             onError(getNetworkError(error, apiUrl, 'execution'));
+        } else {
+             onError(error);
+        }
         return;
     }
   
@@ -100,7 +129,6 @@ export const executeWorkflow = async (
         const wsUrl = `${wsProtocol}//${url.host}/ws?clientId=${clientId}`;
         const ws = new WebSocket(wsUrl);
         
-        // Mapping für schöne Namen in der Anzeige
         const nodesById = new Map(workflow.nodes.map(node => [String(node.id), node.title || node.type]));
 
         ws.onmessage = (event) => {
@@ -109,11 +137,9 @@ export const executeWorkflow = async (
 
             if (data.type === 'executing' && data.data.prompt_id === promptId) {
                 if (data.data.node === null) {
-                    // Fertig!
                     if (ws.readyState === WebSocket.OPEN) ws.close();
                     onComplete();
                 } else {
-                    // Neuer Node startet
                     const nodeName = nodesById.get(String(data.data.node)) || `Node ${data.data.node}`;
                     onProgress({ message: `Executing: ${nodeName}...`, progress: 0 });
                 }
@@ -138,15 +164,86 @@ export const executeWorkflow = async (
 };
 
 /**
+ * Validates the workflow against the ComfyUI API without waiting for execution.
+ * Returns success: true if accepted, or success: false with error details if rejected.
+ */
+export const validateWorkflowAgainstApi = async (
+    workflow: ComfyUIWorkflow, 
+    apiUrl: string
+): Promise<{ success: boolean; error?: string }> => {
+    
+    // 1. Convert
+    let apiWorkflow;
+    try {
+        apiWorkflow = await convertToApiFormat(workflow, apiUrl);
+    } catch (e) {
+        return { success: false, error: "Failed to prepare workflow format for validation." };
+    }
+
+    // 2. Send to /prompt to check for immediate validation errors (400 Bad Request)
+    const payload = {
+        prompt: apiWorkflow,
+        client_id: uuidv4(), // Random ID, we don't intend to listen to WS here
+    };
+
+    try {
+        const endpoint = new URL('/prompt', apiUrl).toString();
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            const errorBody = await response.text();
+            let errorMessage = `Server responded with ${response.status}`;
+
+            try {
+                const errJson = JSON.parse(errorBody);
+                
+                // Handle specific Node Errors (common in ComfyUI validation)
+                if (errJson.node_errors && Object.keys(errJson.node_errors).length > 0) {
+                    const details = Object.entries(errJson.node_errors).map(([nodeId, errorData]: any) => {
+                         const nodeTitle = workflow.nodes.find(n => String(n.id) === String(nodeId))?.title || `Node ${nodeId}`;
+                         const classType = errorData.class_type;
+                         const messages = errorData.errors.map((e: any) => e.message).join(', ');
+                         return `Error in '${nodeTitle}' (${classType}): ${messages}`;
+                    }).join('\n');
+                    errorMessage = `ComfyUI Validation Failed:\n${details}`;
+                } else if (errJson.error && errJson.error.message) {
+                    errorMessage = `ComfyUI Error: ${errJson.error.message}`;
+                } else {
+                    errorMessage = `ComfyUI Error: ${errorBody}`;
+                }
+            } catch (e) {
+                errorMessage = `ComfyUI Raw Error: ${errorBody}`;
+            }
+
+            return { success: false, error: errorMessage };
+        }
+
+        // If success (200 OK), ComfyUI accepted it and queued it. 
+        // We consider this "Validated". 
+        // NOTE: In a perfect world we would cancel the job immediately if we only wanted to test, 
+        // but that requires tracking the prompt_id and calling /queue/cancel. 
+        // For now, we accept that "Validating" effectively means "Dry Run" / "Ready to Run".
+        return { success: true };
+
+    } catch (error: any) {
+        if (error instanceof TypeError) {
+            return { success: false, error: getNetworkError(error, apiUrl, 'validation').message };
+        }
+        return { success: false, error: error.message || "Unknown error during server validation." };
+    }
+};
+
+/**
  * Uploads an image file to the ComfyUI server.
- * @param imageFile The image file to upload.
- * @param apiUrl The base URL of the ComfyUI API.
- * @returns The JSON response from the server, containing the filename.
  */
 export const uploadImage = async (imageFile: File, apiUrl: string): Promise<ComfyUIImageUploadResponse> => {
     const formData = new FormData();
     formData.append('image', imageFile);
-    formData.append('overwrite', 'true'); // Prevent errors if a file with the same name exists
+    formData.append('overwrite', 'true'); 
 
     let endpoint: string;
     try {
@@ -181,32 +278,21 @@ export const uploadImage = async (imageFile: File, apiUrl: string): Promise<Comf
 export const testComfyUIConnection = async (apiUrl: string): Promise<{ success: boolean; message: string; data?: any; isCorsError?: boolean; isMixedContentError?: boolean; }> => {
     let endpoint: string;
     try {
-        // To accurately test the CORS preflight, we POST to a known GET-only endpoint.
-        // A successful connection will be blocked by CORS if not configured, or will
-        // return a 405 "Method Not Allowed" error if CORS is configured correctly.
-        // This is a reliable way to test the actual browser-server communication.
         endpoint = new URL('/system_stats', apiUrl).toString();
     } catch (e) {
         return { success: false, message: `Invalid URL format: ${apiUrl}` };
     }
 
     try {
-        // Sending a POST request forces the browser to make a CORS preflight (OPTIONS) request.
         const response = await fetch(endpoint, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({}),
         });
 
-        // A 405 "Method Not Allowed" is a SUCCESS for this test.
-        // It means the CORS preflight passed, the server was reached, and it correctly
-        // responded that the endpoint doesn't support POST. The connection is valid.
         if (response.ok || response.status === 405) {
             return { success: true, message: 'Connection to ComfyUI successful! The server is reachable and CORS is configured correctly.' };
         } else {
-             // Any other error status indicates a problem beyond the expected 405.
              return { 
                 success: false, 
                 message: `Connection failed. Server responded with HTTP status ${response.status} ${response.statusText}. Please check if the URL is correct and the server is running.` 
