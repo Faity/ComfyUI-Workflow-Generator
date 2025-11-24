@@ -59,15 +59,16 @@ async function callWithRetry<T>(
 }
 
 
-export const generateWorkflow = async (description: string, localLlmApiUrl: string, inventory: SystemInventory | null, imageName?: string, localLlmModel?: string): Promise<Omit<GeneratedWorkflowResponse, 'validationLog'>> => {
+export const generateWorkflow = async (description: string, ragApiUrl: string, inventory: SystemInventory | null, imageName?: string, localLlmModel?: string): Promise<Omit<GeneratedWorkflowResponse, 'validationLog'>> => {
   if (!process.env.API_KEY) {
     throw new Error("API key is missing. Please set the API_KEY environment variable.");
   }
 
   let ragContextBlock = '';
-  if (localLlmApiUrl) {
+  // Explicitly check for ragApiUrl. We should not fall back to localLlmApiUrl for RAG queries inside the service.
+  if (ragApiUrl) {
       try {
-          const ragContext = await queryRag(description, localLlmApiUrl, localLlmModel);
+          const ragContext = await queryRag(description, ragApiUrl, localLlmModel);
           if (ragContext && ragContext.trim()) {
               ragContextBlock = `
 **RAG-KONTEXT:**
@@ -173,17 +174,17 @@ ${JSON.stringify(inventory, null, 2)}
   }
 };
 
-export const validateAndCorrectWorkflow = async (workflow: ComfyUIWorkflow, localLlmApiUrl?: string, localLlmModel?: string): Promise<ValidationResponse> => {
+export const validateAndCorrectWorkflow = async (workflow: ComfyUIWorkflow, ragApiUrl?: string, localLlmModel?: string): Promise<ValidationResponse> => {
     if (!process.env.API_KEY) {
         throw new Error("API key is missing. Please set the API_KEY environment variable.");
     }
 
     // 1. Fetch RAG Context if API URL is present
     let ragContextBlock = '';
-    if (localLlmApiUrl) {
+    if (ragApiUrl) {
         try {
             // For validation, we ask RAG about common validation rules or known issues with nodes
-            const ragContext = await queryRag("ComfyUI workflow validation rules and node compatibility common errors", localLlmApiUrl, localLlmModel);
+            const ragContext = await queryRag("ComfyUI workflow validation rules and node compatibility common errors", ragApiUrl, localLlmModel);
             if (ragContext && ragContext.trim()) {
                 ragContextBlock = `
 **RAG-KNOWLEDGE BASE:**
@@ -249,17 +250,17 @@ ${ragContext.trim()}
     }
 };
 
-export const debugAndCorrectWorkflow = async (workflow: ComfyUIWorkflow, errorMessage: string, localLlmApiUrl?: string, localLlmModel?: string): Promise<DebugResponse> => {
+export const debugAndCorrectWorkflow = async (workflow: ComfyUIWorkflow, errorMessage: string, ragApiUrl?: string, localLlmModel?: string): Promise<DebugResponse> => {
     if (!process.env.API_KEY) {
         throw new Error("API key is missing. Please set the API_KEY environment variable.");
     }
 
     // 1. Fetch RAG Context using the Error Message
     let ragContextBlock = '';
-    if (localLlmApiUrl) {
+    if (ragApiUrl) {
         try {
             // For debugging, the error message is the perfect query for the RAG
-            const ragContext = await queryRag(`ComfyUI error solution: ${errorMessage}`, localLlmApiUrl, localLlmModel);
+            const ragContext = await queryRag(`ComfyUI error solution: ${errorMessage}`, ragApiUrl, localLlmModel);
             if (ragContext && ragContext.trim()) {
                 ragContextBlock = `
 **RAG-KNOWLEDGE BASE (Relevant to Error):**

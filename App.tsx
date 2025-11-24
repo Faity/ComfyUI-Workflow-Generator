@@ -22,7 +22,7 @@ import type { GeneratedWorkflowResponse, HistoryEntry, ComfyUIWorkflow, SystemIn
 import { useLanguage } from './context/LanguageContext';
 import { useTranslations } from './hooks/useTranslations';
 
-const version = "1.3.3";
+const version = "1.3.4";
 
 type MainView = 'generator' | 'tester' | 'history' | 'local_llm' | 'documentation';
 type ToastState = { id: string; message: string; type: 'success' | 'error' };
@@ -179,10 +179,12 @@ const App: React.FC = () => {
               throw new Error("Ollama Generation URL is missing. Please check settings.");
           }
           // We pass both URLs: one for generation (Ollama), one for RAG (Python Helper)
+          // localLlmModel is used for both generation and embedding if the RAG server supports it
           response = await generateWorkflowLocal(prompt, localLlmApiUrl, localLlmModel, inventory, uploadedImageName, ragApiUrl);
       } else {
-          // For Gemini, we pass the RAG URL if available for context retrieval
-          response = await generateWorkflow(prompt, ragApiUrl || localLlmApiUrl, inventory, uploadedImageName, localLlmModel);
+          // For Gemini, we pass the RAG URL (NOT the Ollama URL) for context retrieval
+          // And we pass localLlmModel so the RAG server knows which model to use for embeddings/queries
+          response = await generateWorkflow(prompt, ragApiUrl, inventory, uploadedImageName, localLlmModel);
       }
       
       // Step 2: Validation
@@ -193,7 +195,7 @@ const App: React.FC = () => {
            validatedResponse = await validateAndCorrectWorkflowLocal(response.workflow, localLlmApiUrl, localLlmModel, ragApiUrl);
       } else {
            // Pass ragApiUrl for context lookup
-           validatedResponse = await validateAndCorrectWorkflow(response.workflow, ragApiUrl || localLlmApiUrl, localLlmModel);
+           validatedResponse = await validateAndCorrectWorkflow(response.workflow, ragApiUrl, localLlmModel);
       }
 
       finalData = {
@@ -250,23 +252,23 @@ const App: React.FC = () => {
     
     try {
         let response;
-        const ragUrlToUse = ragApiUrl || localLlmApiUrl;
-
+        
         if (llmProvider === 'local') {
             if (!localLlmApiUrl) throw new Error("Ollama API URL is missing.");
             
             if (errorMessage.trim()) {
                 setLoadingState({ active: true, message: t.loadingDebugging, progress: 50 });
-                response = await debugAndCorrectWorkflowLocal(workflowToProcess, errorMessage, localLlmApiUrl, localLlmModel, ragUrlToUse);
+                response = await debugAndCorrectWorkflowLocal(workflowToProcess, errorMessage, localLlmApiUrl, localLlmModel, ragApiUrl);
             } else {
-                response = await validateAndCorrectWorkflowLocal(workflowToProcess, localLlmApiUrl, localLlmModel, ragUrlToUse);
+                response = await validateAndCorrectWorkflowLocal(workflowToProcess, localLlmApiUrl, localLlmModel, ragApiUrl);
             }
         } else {
+            // For Gemini
             if (errorMessage.trim()) {
                 setLoadingState({ active: true, message: t.loadingDebugging, progress: 50 });
-                response = await debugAndCorrectWorkflow(workflowToProcess, errorMessage, ragUrlToUse, localLlmModel);
+                response = await debugAndCorrectWorkflow(workflowToProcess, errorMessage, ragApiUrl, localLlmModel);
             } else {
-                response = await validateAndCorrectWorkflow(workflowToProcess, ragUrlToUse, localLlmModel);
+                response = await validateAndCorrectWorkflow(workflowToProcess, ragApiUrl, localLlmModel);
             }
         }
         
@@ -375,7 +377,7 @@ const App: React.FC = () => {
         'index.html', 'index.tsx', 'metadata.json', 'App.tsx', 'types.ts', 'translations.ts', 'package.json',
         'context/LanguageContext.tsx',
         'hooks/useTranslations.ts',
-        'services/comfyuiService.ts', 'services/geminiService.ts', 'services/localLlmService.ts', 'services/apiKeyService.ts',
+        'services/comfyuiService.ts', 'services/geminiService.ts', 'services/localLlmService.ts', 'services/apiKeyService.ts', 'services/prompts.ts',
         'components/DocumentationPanel.tsx', 'components/HistoryPanel.tsx', 'components/Icons.tsx', 'components/InputPanel.tsx', 'components/Loader.tsx',
         'components/LocalLlmPanel.tsx', 'components/NodeDetailModal.tsx', 'components/OutputPanel.tsx', 'components/PromptOptimizerModal.tsx',
         'components/SettingsModal.tsx', 'components/TesterPanel.tsx', 'components/Toast.tsx', 'components/WorkflowVisualizer.tsx', 'components/WorkflowWizardModal.tsx',
