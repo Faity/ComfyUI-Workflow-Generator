@@ -1,8 +1,17 @@
 
+
 import { GoogleGenAI } from "@google/genai";
-import type { GeneratedWorkflowResponse, ComfyUIWorkflow, ValidationResponse, DebugResponse, SystemInventory, WorkflowFormat } from '../types';
+import type { GeneratedWorkflowResponse, ComfyUIWorkflow, ComfyUIApiWorkflow, ValidationResponse, DebugResponse, SystemInventory, WorkflowFormat } from '../types';
 import { queryRag } from './localLlmService';
-import { SYSTEM_INSTRUCTION_TEMPLATE, SYSTEM_INSTRUCTION_VALIDATOR, SYSTEM_INSTRUCTION_DEBUGGER, GRAPH_FORMAT_INSTRUCTION, API_FORMAT_INSTRUCTION } from './prompts';
+import { 
+    SYSTEM_INSTRUCTION_TEMPLATE, 
+    SYSTEM_INSTRUCTION_VALIDATOR, 
+    SYSTEM_INSTRUCTION_API_VALIDATOR,
+    SYSTEM_INSTRUCTION_DEBUGGER, 
+    SYSTEM_INSTRUCTION_API_DEBUGGER,
+    GRAPH_FORMAT_INSTRUCTION, 
+    API_FORMAT_INSTRUCTION 
+} from './prompts';
 
 /**
  * Waits for a specified amount of time.
@@ -11,12 +20,7 @@ import { SYSTEM_INSTRUCTION_TEMPLATE, SYSTEM_INSTRUCTION_VALIDATOR, SYSTEM_INSTR
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
- * Executes an API operation with automatic retry logic for transient errors (like 503 Service Unavailable).
- * Implements exponential backoff.
- * 
- * @param operation The async operation to retry.
- * @param retries Maximum number of retry attempts (default: 3).
- * @param backoff Initial delay in milliseconds (default: 1000).
+ * Executes an API operation with automatic retry logic for transient errors.
  */
 async function callWithRetry<T>(
     operation: () => Promise<T>, 
@@ -27,8 +31,6 @@ async function callWithRetry<T>(
         try {
             return await operation();
         } catch (error: any) {
-            // Determine if the error is a transient server error (500, 502, 503, 504) or a network fetch error.
-            // Google GenAI SDK errors might not always have a clean 'status' property, so we check message content too.
             const isRetryable = 
                 error.status === 503 || 
                 error.status === 502 || 
@@ -42,22 +44,22 @@ async function callWithRetry<T>(
                 ));
 
             if (isRetryable && i < retries - 1) {
-                // Add a little jitter to the backoff to prevent thundering herd
                 const jitter = Math.random() * 500;
                 const waitTime = backoff * Math.pow(2, i) + jitter;
-                
                 console.warn(`Gemini API Transient Error (${error.status || error.message}). Retrying in ${Math.round(waitTime)}ms... (Attempt ${i + 1}/${retries})`);
                 await wait(waitTime);
                 continue;
             }
-            
-            // If not retryable or max retries reached, re-throw
             throw error;
         }
     }
     throw new Error("Max retries exceeded");
 }
 
+// Helper to check if workflow is in Graph format
+function isGraphFormat(workflow: any): boolean {
+    return typeof workflow === 'object' && workflow !== null && 'nodes' in workflow && 'links' in workflow;
+}
 
 export const generateWorkflow = async (description: string, ragApiUrl: string, inventory: SystemInventory | null, imageName?: string, localLlmModel?: string, format: WorkflowFormat = 'graph'): Promise<Omit<GeneratedWorkflowResponse, 'validationLog'>> => {
   if (!process.env.API_KEY) {
@@ -65,14 +67,13 @@ export const generateWorkflow = async (description: string, ragApiUrl: string, i
   }
 
   let ragContextBlock = '';
-  // Explicitly check for ragApiUrl. We should not fall back to localLlmApiUrl for RAG queries inside the service.
   if (ragApiUrl) {
       try {
           const ragContext = await queryRag(description, ragApiUrl, localLlmModel);
           if (ragContext && ragContext.trim()) {
               ragContextBlock = `
 **RAG-KONTEXT:**
-Die folgenden Informationen wurden aus einer lokalen Wissensdatenbank abgerufen, um zusätzlichen Kontext für die Anfrage des Benutzers bereitzustellen. Verwenden Sie diese Informationen, um einen genaueren und relevanteren Workflow zu generieren.
+Die folgenden Informationen wurden aus einer lokalen Wissensdatenbank abgerufen, um zusätzlichen Kontext für die Anfrage des Benutzers bereitzustellen.
 \`\`\`
 ${ragContext.trim()}
 \`\`\`
@@ -80,7 +81,6 @@ ${ragContext.trim()}
           }
       } catch (error) {
           console.warn("Could not query RAG endpoint, proceeding without RAG context.", error);
-          // Non-fatal, just log and continue.
       }
   }
 
@@ -88,10 +88,8 @@ ${ragContext.trim()}
   if (imageName) {
       imageContextBlock = `
 **USER-PROVIDED IMAGE CONTEXT:**
-The user has uploaded an image that is now available on the ComfyUI server.
-- Filename: \`${imageName}\`
-You MUST incorporate this image into the workflow by creating a "LoadImage" node. The "image" widget value for this node MUST be set to exactly "${imageName}".
-This "LoadImage" node should be the starting point for any image-to-image, inpainting, or ControlNet process described in the user's prompt.
+The user has uploaded an image: \`${imageName}\`.
+You MUST incorporate this image into the workflow by creating a "LoadImage" node. The "image" widget value MUST be "${imageName}".
 `;
   }
 
@@ -112,12 +110,6 @@ ${JSON.stringify(inventory, null, 2)}
     .replace('{{SYSTEM_INVENTORY_PLACEHOLDER}}', inventoryBlock)
     .replace('{{FORMAT_INSTRUCTION_PLACEHOLDER}}', formatInstruction);
 
-  console.log("=== DEBUG: GENERATING WORKFLOW ===");
-  console.log("Format:", format);
-  console.log("=== DEBUG: RAG CONTEXT BLOCK ===");
-  console.log(ragContextBlock);
-  console.log("================================");
-
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   let rawResponseText = '';
@@ -134,78 +126,56 @@ ${JSON.stringify(inventory, null, 2)}
     });
 
     rawResponseText = response.text.trim();
-    
-    // Clean potential markdown fences.
     if (rawResponseText.startsWith('```json')) {
       rawResponseText = rawResponseText.substring(7, rawResponseText.length - 3).trim();
     }
     
-    // The response should be a clean JSON string, ready to parse.
     const parsedResponse = JSON.parse(rawResponseText) as GeneratedWorkflowResponse & { error?: string };
     
-    // Check for model-generated error message.
     if (parsedResponse.error) {
         throw new Error(`The model could not generate a workflow: ${parsedResponse.error}`);
     }
 
-    // New, more robust validation.
     if (!parsedResponse.workflow || !parsedResponse.requirements) {
-        console.error("Invalid response structure received from AI:", parsedResponse);
         throw new Error("Generated JSON is missing 'workflow' or 'requirements' top-level keys.");
     }
 
-    const { workflow, requirements } = parsedResponse;
-
     if (format === 'graph') {
-        // Explicit check for Graph format
-        const wf = workflow as ComfyUIWorkflow;
-        if (!wf.nodes || !wf.links || typeof wf.last_node_id === 'undefined') {
-            console.error("Invalid workflow structure received from AI:", workflow);
-            throw new Error("Generated JSON is not a valid ComfyUI workflow (Graph format). It's missing essential properties like 'nodes', 'links', or 'last_node_id'.");
+        const wf = parsedResponse.workflow as ComfyUIWorkflow;
+        if (!wf.nodes || !wf.links) {
+            throw new Error("Generated JSON is not a valid ComfyUI workflow (Graph format).");
         }
-    } else {
-        // Basic check for API format (should be an object with keys as IDs)
-         if (Array.isArray(workflow) || (workflow as any).nodes) {
-            console.warn("AI generated Graph format despite requesting API format. Attempting to proceed, but visualizer might be confused.");
-         }
-    }
-    
-    if (!requirements || !Array.isArray(requirements.custom_nodes) || !Array.isArray(requirements.models)) {
-        console.error("Invalid requirements structure received from AI:", requirements);
-        throw new Error("Generated JSON has an invalid 'requirements' structure.");
     }
     
     return parsedResponse;
   } catch (error) {
     console.error("Error in generateWorkflow:", error);
     if (error instanceof SyntaxError) {
-      console.error("Malformed JSON received from AI:", rawResponseText);
-      throw new Error("Failed to parse the AI's response as valid JSON. The model may have returned a malformed output.");
+      console.error("Malformed JSON:", rawResponseText);
+      throw new Error("Failed to parse the AI's response as valid JSON.");
     }
-    // If it's one of our custom errors or an error from the model, just re-throw it.
-    if (error instanceof Error) {
-        throw error;
-    }
-    // Fallback for other unexpected errors.
-    throw new Error("An unknown error occurred while communicating with the AI.");
+    if (error instanceof Error) throw error;
+    throw new Error("An unknown error occurred.");
   }
 };
 
-export const validateAndCorrectWorkflow = async (workflow: ComfyUIWorkflow, ragApiUrl?: string, localLlmModel?: string): Promise<ValidationResponse> => {
+export const validateAndCorrectWorkflow = async (workflow: ComfyUIWorkflow | ComfyUIApiWorkflow, ragApiUrl?: string, localLlmModel?: string): Promise<ValidationResponse> => {
     if (!process.env.API_KEY) {
-        throw new Error("API key is missing. Please set the API_KEY environment variable.");
+        throw new Error("API key is missing.");
     }
 
-    // 1. Fetch RAG Context if API URL is present
+    const isGraph = isGraphFormat(workflow);
+    
+    // 1. Fetch RAG Context
     let ragContextBlock = '';
     if (ragApiUrl) {
         try {
-            // For validation, we ask RAG about common validation rules or known issues with nodes
-            const ragContext = await queryRag("ComfyUI workflow validation rules and node compatibility common errors", ragApiUrl, localLlmModel);
+            const contextType = isGraph ? "Graph Format" : "API Format";
+            const ragContext = await queryRag(`ComfyUI workflow validation rules (${contextType}) and node compatibility`, ragApiUrl, localLlmModel);
             if (ragContext && ragContext.trim()) {
                 ragContextBlock = `
 **RAG-KNOWLEDGE BASE:**
-Use the following retrieved knowledge to help validate the workflow and check for specific node requirements or known issues:
+Use the following retrieved knowledge to help validate the workflow:
 \`\`\`
 ${ragContext.trim()}
 \`\`\`
@@ -216,7 +186,9 @@ ${ragContext.trim()}
         }
     }
 
-    const finalSystemInstruction = SYSTEM_INSTRUCTION_VALIDATOR.replace('{{RAG_CONTEXT_PLACEHOLDER}}', ragContextBlock);
+    // Select specific prompt based on format
+    const basePrompt = isGraph ? SYSTEM_INSTRUCTION_VALIDATOR : SYSTEM_INSTRUCTION_API_VALIDATOR;
+    const finalSystemInstruction = basePrompt.replace('{{RAG_CONTEXT_PLACEHOLDER}}', ragContextBlock);
 
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const workflowString = JSON.stringify(workflow, null, 2);
@@ -226,7 +198,7 @@ ${ragContext.trim()}
         const response = await callWithRetry(async () => {
             return await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
-                contents: `Please validate and correct the following ComfyUI workflow:\n\n${workflowString}`,
+                contents: `Please validate and correct the following ComfyUI workflow (${isGraph ? 'Graph' : 'API'} format):\n\n${workflowString}`,
                 config: {
                     systemInstruction: finalSystemInstruction,
                     responseMimeType: "application/json",
@@ -238,49 +210,37 @@ ${ragContext.trim()}
         const parsedResponse = JSON.parse(rawResponseText) as ValidationResponse;
 
         if (!parsedResponse.validationLog || !parsedResponse.correctedWorkflow) {
-             console.error("Invalid response structure received from Validator AI:", parsedResponse);
-            throw new Error("Validator AI returned a malformed response. It's missing 'validationLog' or 'correctedWorkflow'.");
+            throw new Error("Validator AI returned a malformed response.");
         }
-
-        if (!Array.isArray(parsedResponse.validationLog)) {
-             console.error("Invalid validationLog structure:", parsedResponse.validationLog);
-            throw new Error("Validator AI returned an invalid 'validationLog' structure. It must be an array.");
-        }
-
-        // Simple check if it returned the correct structure
-        // Note: Validator is primarily tuned for Graph format currently. 
-        // If API format is passed, results might vary, but we pass it through.
 
         return parsedResponse;
 
     } catch (error) {
         console.error("Error in validateAndCorrectWorkflow:", error);
         if (error instanceof SyntaxError) {
-          console.error("Malformed JSON received from Validator AI:", rawResponseText);
           throw new Error("Failed to parse the Validator AI's response as valid JSON.");
         }
-        if (error instanceof Error) {
-            throw error;
-        }
-        throw new Error("An unknown error occurred while communicating with the Validator AI.");
+        if (error instanceof Error) throw error;
+        throw new Error("An unknown error occurred.");
     }
 };
 
-export const debugAndCorrectWorkflow = async (workflow: ComfyUIWorkflow, errorMessage: string, ragApiUrl?: string, localLlmModel?: string): Promise<DebugResponse> => {
+export const debugAndCorrectWorkflow = async (workflow: ComfyUIWorkflow | ComfyUIApiWorkflow, errorMessage: string, ragApiUrl?: string, localLlmModel?: string): Promise<DebugResponse> => {
     if (!process.env.API_KEY) {
-        throw new Error("API key is missing. Please set the API_KEY environment variable.");
+        throw new Error("API key is missing.");
     }
 
-    // 1. Fetch RAG Context using the Error Message
+    const isGraph = isGraphFormat(workflow);
+
+    // 1. Fetch RAG Context
     let ragContextBlock = '';
     if (ragApiUrl) {
         try {
-            // For debugging, the error message is the perfect query for the RAG
             const ragContext = await queryRag(`ComfyUI error solution: ${errorMessage}`, ragApiUrl, localLlmModel);
             if (ragContext && ragContext.trim()) {
                 ragContextBlock = `
-**RAG-KNOWLEDGE BASE (Relevant to Error):**
-Use the following retrieved knowledge to identify the cause of the error and find a solution:
+**RAG-KNOWLEDGE BASE:**
+Use the following retrieved knowledge to help fix the error:
 \`\`\`
 ${ragContext.trim()}
 \`\`\`
@@ -291,13 +251,12 @@ ${ragContext.trim()}
         }
     }
 
-    const finalSystemInstruction = SYSTEM_INSTRUCTION_DEBUGGER.replace('{{RAG_CONTEXT_PLACEHOLDER}}', ragContextBlock);
+    // Select specific prompt based on format
+    const basePrompt = isGraph ? SYSTEM_INSTRUCTION_DEBUGGER : SYSTEM_INSTRUCTION_API_DEBUGGER;
+    const finalSystemInstruction = basePrompt.replace('{{RAG_CONTEXT_PLACEHOLDER}}', ragContextBlock);
 
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const requestPayload = {
-        workflow,
-        errorMessage,
-    };
+    const requestPayload = { workflow, errorMessage };
     const payloadString = JSON.stringify(requestPayload, null, 2);
     let rawResponseText = '';
 
@@ -317,8 +276,7 @@ ${ragContext.trim()}
         const parsedResponse = JSON.parse(rawResponseText) as DebugResponse;
 
         if (!parsedResponse.correctionLog || !parsedResponse.correctedWorkflow) {
-             console.error("Invalid response structure received from Debugger AI:", parsedResponse);
-            throw new Error("Debugger AI returned a malformed response. It's missing 'correctionLog' or 'correctedWorkflow'.");
+            throw new Error("Debugger AI returned a malformed response.");
         }
         
         return parsedResponse;
@@ -326,12 +284,9 @@ ${ragContext.trim()}
     } catch (error) {
         console.error("Error in debugAndCorrectWorkflow:", error);
         if (error instanceof SyntaxError) {
-          console.error("Malformed JSON received from Debugger AI:", rawResponseText);
           throw new Error("Failed to parse the Debugger AI's response as valid JSON.");
         }
-        if (error instanceof Error) {
-            throw error;
-        }
-        throw new Error("An unknown error occurred while communicating with the Debugger AI.");
+        if (error instanceof Error) throw error;
+        throw new Error("An unknown error occurred.");
     }
 };

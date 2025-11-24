@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback } from 'react';
 // FIX: Corrected import alias for uuid v4 to match usage.
 import { v4 as uuidv4 } from 'uuid';
@@ -187,35 +188,21 @@ const App: React.FC = () => {
       }
       
       // Step 2: Validation
-      // Note: Our current validators are optimized for Graph format. 
-      // If format is API, we might skip deep validation or use a simplified one.
-      // For now, we try to validate if it's graph format.
-      
+      setLoadingState({ active: true, message: t.loadingStep2, progress: 60 });
       let validatedResponse;
-
-      if (workflowFormat === 'graph') {
-          setLoadingState({ active: true, message: t.loadingStep2, progress: 60 });
-          if (llmProvider === 'local') {
-               validatedResponse = await validateAndCorrectWorkflowLocal(response.workflow as ComfyUIWorkflow, localLlmApiUrl, localLlmModel, ragApiUrl);
-          } else {
-               validatedResponse = await validateAndCorrectWorkflow(response.workflow as ComfyUIWorkflow, ragApiUrl, localLlmModel);
-          }
-          
-          finalData = {
-            workflow: validatedResponse.correctedWorkflow,
-            requirements: response.requirements,
-            validationLog: validatedResponse.validationLog,
-            correctionLog: [], // Initialize empty
-          };
+      
+      if (llmProvider === 'local') {
+            validatedResponse = await validateAndCorrectWorkflowLocal(response.workflow as ComfyUIWorkflow, localLlmApiUrl, localLlmModel, ragApiUrl);
       } else {
-          // Skip advanced validation for API format for now, as validators expect Graph structure
-          finalData = {
-              workflow: response.workflow,
-              requirements: response.requirements,
-              validationLog: [],
-              correctionLog: []
-          };
+            validatedResponse = await validateAndCorrectWorkflow(response.workflow as ComfyUIWorkflow, ragApiUrl, localLlmModel);
       }
+      
+      finalData = {
+        workflow: validatedResponse.correctedWorkflow,
+        requirements: response.requirements,
+        validationLog: validatedResponse.validationLog,
+        correctionLog: [], // Initialize empty
+      };
 
 
       // Step 3: Server-side Validation with Auto-Correction
@@ -298,14 +285,9 @@ const App: React.FC = () => {
 
   const handleValidation = async (workflowJson: string, errorMessage: string) => {
     if (!ensureApiKey()) return;
-    // Validation only supported for Graph format currently
-    if (workflowFormat === 'api') {
-        showToast("Validation is only available for Graph-format workflows.", 'error');
-        return;
-    }
 
     setLoadingState({ active: true, message: t.loadingValidating, progress: 25 });
-    let workflowToProcess: ComfyUIWorkflow;
+    let workflowToProcess: any; // Can be Graph or API format
 
     try {
         workflowToProcess = JSON.parse(workflowJson);
@@ -315,6 +297,15 @@ const App: React.FC = () => {
         return;
     }
     
+    // Auto-detect format for validation context
+    let detectedFormat: WorkflowFormat = 'graph';
+    if (!workflowToProcess.nodes && !workflowToProcess.links && (workflowToProcess as any)[Object.keys(workflowToProcess)[0]]?.class_type) {
+        detectedFormat = 'api';
+    }
+    
+    // Update state to match what we are looking at
+    setWorkflowFormat(detectedFormat);
+
     try {
         let response;
         

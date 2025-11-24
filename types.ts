@@ -76,12 +76,12 @@ export interface GeneratedWorkflowResponse {
 
 export interface ValidationResponse {
     validationLog: ValidationLogEntry[];
-    correctedWorkflow: ComfyUIWorkflow; // Validator currently supports graph format primarily
+    correctedWorkflow: ComfyUIWorkflow | ComfyUIApiWorkflow;
 }
 
 export interface DebugResponse {
     correctionLog: DebugLogEntry[];
-    correctedWorkflow: ComfyUIWorkflow;
+    correctedWorkflow: ComfyUIWorkflow | ComfyUIApiWorkflow;
 }
 
 export interface HistoryEntry {
