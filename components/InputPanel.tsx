@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { SparklesIcon, CpuChipIcon, TrashIcon, UploadIcon } from './Icons';
 import { useTranslations } from '../hooks/useTranslations';
-import type { ComfyUIWorkflow, WorkflowFormat } from '../types';
+import type { ComfyUIWorkflow } from '../types';
 
 interface InputPanelProps {
   prompt: string;
@@ -15,8 +15,6 @@ interface InputPanelProps {
   onWorkflowImport: (workflow: ComfyUIWorkflow) => void;
   uploadedImage: File | null;
   setUploadedImage: (file: File | null) => void;
-  workflowFormat: WorkflowFormat;
-  setWorkflowFormat: (format: WorkflowFormat) => void;
 }
 
 const examplePrompts = [
@@ -26,7 +24,7 @@ const examplePrompts = [
     "Workflow für ein SD 1.5 Modell mit ControlNet für Canny Edges.",
 ];
 
-const InputPanel: React.FC<InputPanelProps> = ({ prompt, setPrompt, onGenerate, isLoading, onOpenOptimizer, onOpenWizard, onWorkflowImport, uploadedImage, setUploadedImage, workflowFormat, setWorkflowFormat }) => {
+const InputPanel: React.FC<InputPanelProps> = ({ prompt, setPrompt, onGenerate, isLoading, onOpenOptimizer, onOpenWizard, onWorkflowImport, uploadedImage, setUploadedImage }) => {
   const t = useTranslations();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -121,25 +119,6 @@ const InputPanel: React.FC<InputPanelProps> = ({ prompt, setPrompt, onGenerate, 
       <p className="flex-shrink-0 text-sm text-slate-500">
         {t.describeWorkflowSubtext}
       </p>
-
-      {/* Format Toggle */}
-      <div className="flex items-center space-x-3 bg-slate-50 p-2 rounded-lg border border-slate-200">
-          <span className="text-sm font-medium text-slate-600 ml-1">{t.inputPanelFormatLabel}</span>
-          <div className="flex bg-white rounded-md border border-slate-300 p-0.5">
-              <button
-                  onClick={() => setWorkflowFormat('graph')}
-                  className={`px-3 py-1 text-xs font-medium rounded transition-colors ${workflowFormat === 'graph' ? 'bg-teal-100 text-teal-800' : 'text-slate-500 hover:bg-slate-100'}`}
-              >
-                  {t.formatGraph}
-              </button>
-              <button
-                  onClick={() => setWorkflowFormat('api')}
-                  className={`px-3 py-1 text-xs font-medium rounded transition-colors ${workflowFormat === 'api' ? 'bg-indigo-100 text-indigo-800' : 'text-slate-500 hover:bg-slate-100'}`}
-              >
-                  {t.formatApi}
-              </button>
-          </div>
-      </div>
 
       <textarea
         value={prompt}

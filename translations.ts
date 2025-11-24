@@ -1,5 +1,6 @@
 
 
+
 export const translations = {
   en: {
     locale: 'en-US',
@@ -61,9 +62,6 @@ export const translations = {
     inputPanelImageUpload: 'Upload Image (Optional)',
     inputPanelImageUploadSubtext: 'For Img2Img, Inpainting, or ControlNet workflows.',
     inputPanelDropzone: 'Drag & drop an image here, or click to select a file.',
-    inputPanelFormatLabel: 'Output Format:',
-    formatGraph: 'Graph (GUI)',
-    formatApi: 'API (JSON)',
 
     // OutputPanel.tsx
     waitingForGeneration: 'Waiting for Generation',
@@ -258,9 +256,6 @@ export const translations = {
     inputPanelImageUpload: 'Bild hochladen (Optional)',
     inputPanelImageUploadSubtext: 'Für Img2Img, Inpainting oder ControlNet-Workflows.',
     inputPanelDropzone: 'Bild hierher ziehen oder klicken, um eine Datei auszuwählen.',
-    inputPanelFormatLabel: 'Ausgabe-Format:',
-    formatGraph: 'Graph (Visuell)',
-    formatApi: 'API (JSON)',
 
     // OutputPanel.tsx
     waitingForGeneration: 'Warte auf Generierung',
@@ -317,7 +312,7 @@ export const translations = {
     localLlmTitle: 'Lokales LLM Management',
     localLlmRagTab: 'RAG / Wissensdatenbank',
     localLlmFineTuneTab: 'Fine-Tuning',
-    localLlmRagSubtext: 'Laden Sie .txt oder .md Dateien hoch, um die Wissensdatenbank Ihres lokalen LLMs für Retrieval-Augmented Generation (RAG) zu füllen.',
+    localLlmRagSubtext: 'Laden Sie .txt oder .md Dateien hoch, um die Wissensdatenbank Ihres lokalen LLMs für Retrieval-Augmented Generation (RAG).',
     localLlmDropzone: 'Dateien hierher ziehen oder klicken, um sie auszuwählen.',
     localLlmUploading: 'Lädt hoch...',
     localLlmUploadButton: 'Ausgewählte Dateien hochladen',
