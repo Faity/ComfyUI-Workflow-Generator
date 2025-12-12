@@ -10,7 +10,7 @@ import {
 } from './prompts';
 
 // --- Helper to extract JSON from LLM text response ---
-// Updated to handle mixed content (Thinking tags + JSON)
+// Updated to handle mixed content (Thinking tags + JSON) and trailing text robustly
 const extractContentFromText = (text: string): { json: any, thoughts?: string } => {
     let cleanText = text.trim();
     let thoughts: string | undefined;
@@ -26,17 +26,66 @@ const extractContentFromText = (text: string): { json: any, thoughts?: string } 
 
     // 2. Extract JSON
     let jsonContent = cleanText;
-    const jsonBlockRegex = /```json\s*([\s\S]*?)\s*```/;
+    
+    // Attempt 1: Regex for code blocks (Most reliable if model follows instructions)
+    const jsonBlockRegex = /```(?:json)?\s*([\s\S]*?)\s*```/i;
     const match = cleanText.match(jsonBlockRegex);
     
     if (match && match[1]) {
         jsonContent = match[1].trim();
     } else {
-        // Fallback: try to find the first { and last }
+        // Attempt 2: Robust Fallback with Balanced Brace Counting
+        // This solves "Unexpected non-whitespace character after JSON" if the model adds text after the JSON.
         const firstBrace = cleanText.indexOf('{');
-        const lastBrace = cleanText.lastIndexOf('}');
-        if (firstBrace !== -1 && lastBrace !== -1) {
-            jsonContent = cleanText.substring(firstBrace, lastBrace + 1);
+        if (firstBrace !== -1) {
+            let balance = 0;
+            let lastBrace = -1;
+            let insideString = false;
+            let escape = false;
+
+            for (let i = firstBrace; i < cleanText.length; i++) {
+                const char = cleanText[i];
+
+                // Handle escapes inside strings (e.g. "{\"key\": ...}")
+                if (escape) {
+                    escape = false;
+                    continue;
+                }
+                if (char === '\\') {
+                    escape = true;
+                    continue;
+                }
+                
+                // Toggle string state
+                if (char === '"') {
+                    insideString = !insideString;
+                    continue;
+                }
+
+                // Count braces only if not inside a string
+                if (!insideString) {
+                    if (char === '{') {
+                        balance++;
+                    } else if (char === '}') {
+                        balance--;
+                        if (balance === 0) {
+                            lastBrace = i;
+                            break; // Found the matching closing brace for the root object
+                        }
+                    }
+                }
+            }
+
+            if (lastBrace !== -1) {
+                jsonContent = cleanText.substring(firstBrace, lastBrace + 1);
+            } else {
+                // If counting failed (e.g. malformed JSON), fall back to simple substring
+                // This might fail if trailing text exists, but it's a last resort.
+                const fallbackLastBrace = cleanText.lastIndexOf('}');
+                if (fallbackLastBrace !== -1) {
+                    jsonContent = cleanText.substring(firstBrace, fallbackLastBrace + 1);
+                }
+            }
         }
     }
 
@@ -46,7 +95,7 @@ const extractContentFromText = (text: string): { json: any, thoughts?: string } 
     } catch (e) {
         console.error("JSON Parse Error. Raw Text:", text);
         console.error("Attempted JSON content:", jsonContent);
-        throw e;
+        throw new Error(`Failed to parse JSON response: ${(e as Error).message}`);
     }
 };
 
