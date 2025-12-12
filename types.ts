@@ -72,6 +72,7 @@ export interface GeneratedWorkflowResponse {
   requirements: WorkflowRequirements;
   validationLog?: ValidationLogEntry[];
   correctionLog?: DebugLogEntry[];
+  thoughts?: string; // New field for Chain of Thought
 }
 
 export interface ValidationResponse {

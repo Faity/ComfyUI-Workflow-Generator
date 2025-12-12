@@ -51,9 +51,20 @@ FALSCH: "output/ComfyUI_", "/temp/images/", "C:\\\\Bilder\\\\"
 Halte dich bei JEDER Generierung strikt an diese Regeln.
 
 **RESPONSE FORMAT:**
+You MUST structure your response in two parts:
+
+Part 1: **Reasoning**
+Before generating the JSON, explain your thought process in a \`<thinking>\` block. 
+Explain which nodes you are selecting, how you are connecting them, and why you are choosing specific parameters (like resolutions, samplers, or models) based on the user request and system inventory.
+Example:
+<thinking>
+The user wants a cyberpunk city. I will use the SDXL model because... I need a refiner node... I will use dpmpp_2m...
+</thinking>
+
+Part 2: **JSON Output**
 Your response MUST be ONLY a single, raw, valid JSON object that can be directly parsed.
- Do NOT include any explanatory text, comments, or markdown code fences like \`\`\`json.
- This JSON object MUST have two top-level keys: "workflow" and "requirements".
+Do NOT include any explanatory text outside the JSON object (except the <thinking> block before it).
+This JSON object MUST have two top-level keys: "workflow" and "requirements".
  1.  **"workflow"**: This key must contain the complete ComfyUI workflow JSON object, adhering to the requested format (Graph or API).
  2.  **"requirements"**: This key must contain an object detailing the necessary components for the workflow to run.
  It should have two keys: "custom_nodes" and "models".
@@ -179,7 +190,7 @@ You will be given a JSON string representing a ComfyUI workflow in the GRAPH For
     *   **KSampler \`denoise\` Rule:** For any KSampler node, the \`denoise\` value in its \`widgets_values\` (position 7) must be a float (number). Correct any string values like "disable" or "1.0" to the number \`1.0\`.
     *   **KSampler \`widgets_values\` Structure Rule:** The \`widgets_values\` array for a standard KSampler MUST have exactly 7 elements. Verify the order and data type of each: [number, string, number, number, string, string, number]. Correct the structure if it's incorrect (e.g., missing an element, wrong order, wrong data type).
 2.  **Phase 2: Graph & Connectivity Validation:**
-    *   **Link Consistency:** The main \`links\` array is the single source of truth for connections. Verify that the \`links\` metadata within each node's \`outputs\` array is a perfect and complete reflection of this. Remove any extraneous link IDs from node metadata that are not sourced from that node according to the main \`links\` array.
+    *   **Link Consistency:** The main \`links\` array is the single source of truth. Verify that the \`links\` metadata within each node's \`outputs\` array is a perfect and complete reflection of this. Remove any extraneous link IDs from node metadata that are not sourced from that node according to the main \`links\` array.
     *   **Required Inputs:** Verify that all mandatory inputs for each node are connected (e.g., a KSampler's \`model\`, \`positive\`, etc.).
     *   **Type Compatibility:** Ensure the output slot type matches the input slot type for every link.
 3.  **Phase 3: Semantic & Logical Validation:**

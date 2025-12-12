@@ -10,20 +10,44 @@ import {
 } from './prompts';
 
 // --- Helper to extract JSON from LLM text response ---
-const extractJsonFromText = (text: string): any => {
+// Updated to handle mixed content (Thinking tags + JSON)
+const extractContentFromText = (text: string): { json: any, thoughts?: string } => {
     let cleanText = text.trim();
+    let thoughts: string | undefined;
+
+    // 1. Extract Thoughts if present (<thinking>...</thinking>)
+    // Using [\s\S]*? to match across newlines
+    const thinkingMatch = cleanText.match(/<thinking>([\s\S]*?)<\/thinking>/);
+    if (thinkingMatch && thinkingMatch[1]) {
+        thoughts = thinkingMatch[1].trim();
+        // Remove thoughts from text to safely extract JSON later
+        cleanText = cleanText.replace(thinkingMatch[0], '').trim();
+    }
+
+    // 2. Extract JSON
+    let jsonContent = cleanText;
     const jsonBlockRegex = /```json\s*([\s\S]*?)\s*```/;
     const match = cleanText.match(jsonBlockRegex);
+    
     if (match && match[1]) {
-        cleanText = match[1].trim();
+        jsonContent = match[1].trim();
     } else {
+        // Fallback: try to find the first { and last }
         const firstBrace = cleanText.indexOf('{');
         const lastBrace = cleanText.lastIndexOf('}');
         if (firstBrace !== -1 && lastBrace !== -1) {
-            cleanText = cleanText.substring(firstBrace, lastBrace + 1);
+            jsonContent = cleanText.substring(firstBrace, lastBrace + 1);
         }
     }
-    return JSON.parse(cleanText);
+
+    try {
+        const parsedJson = JSON.parse(jsonContent);
+        return { json: parsedJson, thoughts };
+    } catch (e) {
+        console.error("JSON Parse Error. Raw Text:", text);
+        console.error("Attempted JSON content:", jsonContent);
+        throw e;
+    }
 };
 
 // Helper to check if workflow is in Graph format
@@ -37,6 +61,9 @@ async function callLocalLlmChat(apiUrl: string, model: string, messages: Array<{
     const endpoint = new URL('/v1/chat/completions', apiUrl).toString();
     
     try {
+        // We do NOT enforce response_format: { type: "json_object" } here anymore,
+        // because we want the model to output free text (<thinking>) before the JSON.
+        // Command-R handles this well via prompt instructions.
         const response = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -44,8 +71,7 @@ async function callLocalLlmChat(apiUrl: string, model: string, messages: Array<{
                 model: model,
                 messages: messages,
                 temperature: 0.2,
-                stream: false,
-                response_format: { type: "json_object" }
+                stream: false
             }),
         });
 
@@ -135,13 +161,16 @@ ${JSON.stringify(inventory, null, 2)}
             { role: "user", content: description }
         ]);
 
-        const parsedResponse = extractJsonFromText(content) as GeneratedWorkflowResponse;
+        const { json: parsedResponse, thoughts } = extractContentFromText(content);
 
         if (!parsedResponse.workflow || !parsedResponse.requirements) {
             throw new Error("Generated JSON is missing 'workflow' or 'requirements' top-level keys.");
         }
 
-        return parsedResponse;
+        // Inject thoughts back into response object so frontend can display them
+        (parsedResponse as GeneratedWorkflowResponse).thoughts = thoughts;
+
+        return parsedResponse as GeneratedWorkflowResponse;
     } catch (error: any) {
         console.error("Error in generateWorkflowLocal:", error);
         throw new Error(`Local LLM Generation Failed: ${error.message}`);
@@ -192,7 +221,7 @@ ${ragContext.trim()}
             { role: "user", content: `Please validate and correct this workflow (${isGraph ? 'Graph' : 'API'} format):\n\n${workflowString}` }
         ]);
 
-        const parsedResponse = extractJsonFromText(content) as ValidationResponse;
+        const { json: parsedResponse } = extractContentFromText(content);
         if (!parsedResponse.validationLog || !parsedResponse.correctedWorkflow) {
             throw new Error("Invalid response structure from Local Validator.");
         }
@@ -246,7 +275,7 @@ ${ragContext.trim()}
             { role: "user", content: requestPayload }
         ]);
 
-        const parsedResponse = extractJsonFromText(content) as DebugResponse;
+        const { json: parsedResponse } = extractContentFromText(content);
         if (!parsedResponse.correctionLog || !parsedResponse.correctedWorkflow) {
             throw new Error("Invalid response structure from Local Debugger.");
         }

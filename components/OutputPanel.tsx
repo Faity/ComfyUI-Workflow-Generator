@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import type { GeneratedWorkflowResponse, ValidationLogEntry, DebugLogEntry, WorkflowFormat, ComfyUIImage } from '../types';
-import { DownloadIcon, ClipboardIcon, PlayIcon, BugAntIcon, Square2StackIcon, SparklesIcon, DatabaseIcon } from './Icons';
+import { DownloadIcon, ClipboardIcon, PlayIcon, BugAntIcon, Square2StackIcon, SparklesIcon, DatabaseIcon, LightBulbIcon } from './Icons';
 import { useTranslations } from '../hooks/useTranslations';
 import ProgressBarLoader from './Loader';
 import { learnWorkflow } from '../services/localLlmService';
@@ -152,6 +151,47 @@ const ImagePreview: React.FC<{ images: ComfyUIImage[], comfyUrl: string }> = ({ 
     );
 };
 
+const ReasoningAccordion: React.FC<{ thoughts: string }> = ({ thoughts }) => {
+    const [isOpen, setIsOpen] = useState(true);
+
+    if (!thoughts) return null;
+
+    return (
+        <div className="mx-4 mt-4 mb-2">
+            <div 
+                className={`
+                    border border-indigo-200 rounded-xl overflow-hidden transition-all duration-300
+                    ${isOpen ? 'bg-indigo-50/50' : 'bg-white hover:bg-indigo-50/30'}
+                `}
+            >
+                <button 
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="w-full flex items-center justify-between p-3 text-left focus:outline-none"
+                >
+                    <div className="flex items-center space-x-2 text-indigo-800">
+                        <LightBulbIcon className="w-5 h-5 text-indigo-500" />
+                        <span className="font-semibold text-sm">AI Reasoning</span>
+                        <span className="text-xs text-indigo-400 bg-indigo-100 px-2 py-0.5 rounded-full border border-indigo-200">
+                            Chain of Thought
+                        </span>
+                    </div>
+                    <span className={`text-indigo-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
+                        ▼
+                    </span>
+                </button>
+                
+                {isOpen && (
+                    <div className="px-4 pb-4 animate-fade-in-down">
+                        <div className="text-sm text-slate-700 leading-relaxed font-mono bg-white/50 p-3 rounded-lg border border-indigo-100 shadow-inner whitespace-pre-wrap max-h-60 overflow-y-auto custom-scrollbar">
+                            {thoughts}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 const OutputPanel: React.FC<OutputPanelProps> = ({ 
     workflowData, 
     generatedImages = [],
@@ -204,7 +244,7 @@ const OutputPanel: React.FC<OutputPanelProps> = ({
     );
   }
 
-  const { workflow, requirements, validationLog, correctionLog } = workflowData;
+  const { workflow, requirements, validationLog, correctionLog, thoughts } = workflowData;
   const hasLogs = (validationLog && validationLog.length > 0) || (correctionLog && correctionLog.length > 0);
   const hasImages = generatedImages && generatedImages.length > 0;
 
@@ -295,6 +335,11 @@ const OutputPanel: React.FC<OutputPanelProps> = ({
       </div>
 
       <div className="flex-grow overflow-auto bg-slate-50">
+        
+        {/* Chain of Thought Visualization */}
+        {thoughts && (
+            <ReasoningAccordion thoughts={thoughts} />
+        )}
         
         {/* JSON Code View */}
         {activeTab === 'json' && (
