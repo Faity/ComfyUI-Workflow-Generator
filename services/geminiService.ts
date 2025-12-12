@@ -1,5 +1,3 @@
-
-
 import { GoogleGenAI } from "@google/genai";
 import type { GeneratedWorkflowResponse, ComfyUIWorkflow, ComfyUIApiWorkflow, ValidationResponse, DebugResponse, SystemInventory, WorkflowFormat } from '../types';
 import { queryRag } from './localLlmService';
@@ -61,7 +59,15 @@ function isGraphFormat(workflow: any): boolean {
     return typeof workflow === 'object' && workflow !== null && 'nodes' in workflow && 'links' in workflow;
 }
 
-export const generateWorkflow = async (description: string, ragApiUrl: string, inventory: SystemInventory | null, imageName?: string, localLlmModel?: string, format: WorkflowFormat = 'graph'): Promise<Omit<GeneratedWorkflowResponse, 'validationLog'>> => {
+export const generateWorkflow = async (
+    description: string, 
+    ragApiUrl: string, 
+    inventory: SystemInventory | null, 
+    imageName?: string, 
+    localLlmModel?: string, 
+    format: WorkflowFormat = 'graph',
+    systemInstructionTemplate: string = SYSTEM_INSTRUCTION_TEMPLATE
+): Promise<Omit<GeneratedWorkflowResponse, 'validationLog'>> => {
   if (!process.env.API_KEY) {
     throw new Error("API key is missing. Please set the API_KEY environment variable.");
   }
@@ -104,7 +110,8 @@ ${JSON.stringify(inventory, null, 2)}
   
   const formatInstruction = format === 'api' ? API_FORMAT_INSTRUCTION : GRAPH_FORMAT_INSTRUCTION;
     
-  const finalSystemInstruction = SYSTEM_INSTRUCTION_TEMPLATE
+  // Use the provided template (custom or default) and inject placeholders
+  const finalSystemInstruction = systemInstructionTemplate
     .replace('{{RAG_CONTEXT_PLACEHOLDER}}', ragContextBlock)
     .replace('{{IMAGE_CONTEXT_PLACEHOLDER}}', imageContextBlock)
     .replace('{{SYSTEM_INVENTORY_PLACEHOLDER}}', inventoryBlock)

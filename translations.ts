@@ -44,6 +44,9 @@ export const translations = {
     toastJsonImportFailed: 'Failed to import JSON. Invalid format.',
     toastLearnSuccess: 'Knowledge saved successfully!',
     toastLearnError: 'Failed to save knowledge.',
+    toastSystemPromptSaved: 'System prompt saved successfully!',
+    toastSystemPromptReset: 'System prompt reset to default.',
+    toastSystemPromptImported: 'System prompt imported!',
 
     // InputPanel.tsx
     describeWorkflow: 'Describe Your Workflow',
@@ -154,6 +157,16 @@ export const translations = {
     wizardPlaceholder: 'Your answer...',
     wizardSend: 'Send',
 
+    // SystemPromptModal.tsx
+    systemPromptTitle: 'System Prompt Editor',
+    systemPromptClose: 'Close Editor',
+    systemPromptSave: 'Save Prompt',
+    systemPromptReset: 'Reset to Default',
+    systemPromptExport: 'Export JSON',
+    systemPromptImport: 'Import JSON',
+    systemPromptHelp: 'Edit the base instructions for the AI. Preserve the {{PLACEHOLDERS}} to ensure functionality.',
+    systemPromptTitleTooltip: 'Edit the prompt used to instruct the AI generator.',
+
     // SettingsModal.tsx
     settingsTitle: 'Settings',
     settingsClose: 'Close settings',
@@ -239,6 +252,9 @@ export const translations = {
     toastJsonImportFailed: 'JSON-Import fehlgeschlagen. Ungültiges Format.',
     toastLearnSuccess: 'Wissen erfolgreich gespeichert!',
     toastLearnError: 'Fehler beim Speichern des Wissens.',
+    toastSystemPromptSaved: 'System-Prompt erfolgreich gespeichert!',
+    toastSystemPromptReset: 'System-Prompt auf Standard zurückgesetzt.',
+    toastSystemPromptImported: 'System-Prompt importiert!',
     
     // InputPanel.tsx
     describeWorkflow: 'Beschreiben Sie Ihren Workflow',
@@ -348,6 +364,16 @@ export const translations = {
     wizardPromptCreated: 'Ein technischer Prompt wurde erstellt!',
     wizardPlaceholder: 'Ihre Antwort...',
     wizardSend: 'Senden',
+
+    // SystemPromptModal.tsx
+    systemPromptTitle: 'System-Prompt Editor',
+    systemPromptClose: 'Editor schließen',
+    systemPromptSave: 'Prompt speichern',
+    systemPromptReset: 'Auf Standard zurücksetzen',
+    systemPromptExport: 'JSON Exportieren',
+    systemPromptImport: 'JSON Importieren',
+    systemPromptHelp: 'Bearbeiten Sie die Basis-Anweisungen für die KI. Behalten Sie die {{PLATZHALTER}} bei, um die Funktionalität zu gewährleisten.',
+    systemPromptTitleTooltip: 'Bearbeiten Sie den Prompt, mit dem der KI-Generator instruiert wird.',
     
     // SettingsModal.tsx
     settingsTitle: 'Einstellungen',

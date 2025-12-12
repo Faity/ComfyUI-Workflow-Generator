@@ -13,16 +13,19 @@ import Toast from './components/Toast';
 import PromptOptimizerModal from './components/PromptOptimizerModal';
 import WorkflowWizardModal from './components/WorkflowWizardModal';
 import SettingsModal from './components/SettingsModal';
+import SystemPromptModal from './components/SystemPromptModal';
 // ApiKeyModal is no longer needed as we use .env
 import { generateWorkflow, validateAndCorrectWorkflow, debugAndCorrectWorkflow } from './services/geminiService';
 import { executeWorkflow, uploadImage, validateWorkflowAgainstApi } from './services/comfyuiService';
 import { getServerInventory, generateWorkflowLocal, validateAndCorrectWorkflowLocal, debugAndCorrectWorkflowLocal } from './services/localLlmService';
 import { initializeApiKey } from './services/apiKeyService';
+import { SYSTEM_INSTRUCTION_TEMPLATE } from './services/prompts';
 import type { GeneratedWorkflowResponse, HistoryEntry, ComfyUIWorkflow, SystemInventory, LlmProvider, WorkflowFormat, ComfyUIImage } from './types';
 import { useLanguage } from './context/LanguageContext';
 import { useTranslations } from './hooks/useTranslations';
+import { CommandLineIcon } from './components/Icons';
 
-const version = "1.4.0";
+const version = "1.4.1";
 
 type MainView = 'generator' | 'tester' | 'history' | 'local_llm' | 'documentation';
 type ToastState = { id: string; message: string; type: 'success' | 'error' };
@@ -54,10 +57,16 @@ const App: React.FC = () => {
   const [isOptimizerOpen, setIsOptimizerOpen] = useState(false);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSystemPromptOpen, setIsSystemPromptOpen] = useState(false);
   
   // State
   const [isApiKeySet, setIsApiKeySet] = useState(false);
   const [inventory, setInventory] = useState<SystemInventory | null>(null);
+  
+  // Custom System Prompt
+  const [systemPrompt, setSystemPrompt] = useState<string>(() => {
+      return localStorage.getItem('customSystemPrompt') || SYSTEM_INSTRUCTION_TEMPLATE;
+  });
 
   // Settings
   const [comfyUIUrl, setComfyUIUrl] = useState<string>(() => localStorage.getItem('comfyUIUrl') || 'http://127.0.0.1:8188');
@@ -107,6 +116,15 @@ const App: React.FC = () => {
     localStorage.setItem('localLlmModel', localLlmModel);
   }, [localLlmModel]);
   
+  useEffect(() => {
+      // Persist system prompt whenever it changes
+      if (systemPrompt !== SYSTEM_INSTRUCTION_TEMPLATE) {
+          localStorage.setItem('customSystemPrompt', systemPrompt);
+      } else {
+          localStorage.removeItem('customSystemPrompt');
+      }
+  }, [systemPrompt]);
+
   // Inventory fetching should use the RAG/Helper URL primarily, as that's where the python script lives.
   const fetchInventory = useCallback(async (url: string) => {
       if (!url) return;
@@ -185,9 +203,9 @@ const App: React.FC = () => {
           if (!localLlmApiUrl) {
               throw new Error("Ollama Generation URL is missing. Please check settings.");
           }
-          response = await generateWorkflowLocal(prompt, localLlmApiUrl, localLlmModel, inventory, uploadedImageName, ragApiUrl, 'api');
+          response = await generateWorkflowLocal(prompt, localLlmApiUrl, localLlmModel, inventory, uploadedImageName, ragApiUrl, 'api', systemPrompt);
       } else {
-          response = await generateWorkflow(prompt, ragApiUrl, inventory, uploadedImageName, localLlmModel, 'api');
+          response = await generateWorkflow(prompt, ragApiUrl, inventory, uploadedImageName, localLlmModel, 'api', systemPrompt);
       }
       
       // Step 2: Validation
@@ -451,7 +469,7 @@ const App: React.FC = () => {
         'components/DocumentationPanel.tsx', 'components/HistoryPanel.tsx', 'components/Icons.tsx', 'components/InputPanel.tsx', 'components/Loader.tsx',
         'components/LocalLlmPanel.tsx', 'components/NodeDetailModal.tsx', 'components/OutputPanel.tsx', 'components/PromptOptimizerModal.tsx',
         'components/SettingsModal.tsx', 'components/TesterPanel.tsx', 'components/Toast.tsx', 'components/WorkflowVisualizer.tsx', 'components/WorkflowWizardModal.tsx',
-        'components/ApiKeyModal.tsx',
+        'components/ApiKeyModal.tsx', 'components/SystemPromptModal.tsx',
         'public/Bedienungsanleitung.md', 'public/UserManual.md'
     ];
 
@@ -483,6 +501,16 @@ const App: React.FC = () => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     showToast(t.toastSourceDownloaded, 'success');
+  };
+  
+  const handleSystemPromptSave = (newPrompt: string) => {
+      setSystemPrompt(newPrompt);
+      showToast(t.toastSystemPromptSaved, 'success');
+  };
+  
+  const handleSystemPromptReset = () => {
+      setSystemPrompt(SYSTEM_INSTRUCTION_TEMPLATE);
+      showToast(t.toastSystemPromptReset, 'success');
   };
   
   const renderMainView = () => {
@@ -541,9 +569,13 @@ const App: React.FC = () => {
                   </button>
               ))}
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
                 <button onClick={toggleLanguage} className="px-3 py-1.5 text-sm bg-slate-100 text-slate-600 rounded-full hover:bg-slate-200 transition-colors font-medium border border-slate-200">
                     {language.toUpperCase()}
+                </button>
+                <div className="h-6 w-px bg-slate-300 mx-1"></div>
+                <button onClick={() => setIsSystemPromptOpen(true)} className="text-slate-400 hover:text-indigo-500 transition-colors" title={t.systemPromptTitle}>
+                   <CommandLineIcon className="h-6 w-6" />
                 </button>
                 <button onClick={() => setIsSettingsOpen(true)} className="text-slate-400 hover:text-teal-500 transition-colors" title={t.settingsTitle}>
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
@@ -603,6 +635,13 @@ const App: React.FC = () => {
             setLocalLlmModel={setLocalLlmModel}
             inventory={inventory}
             onRefreshInventory={refreshInventory}
+        />
+        <SystemPromptModal
+            isOpen={isSystemPromptOpen}
+            onClose={() => setIsSystemPromptOpen(false)}
+            currentPrompt={systemPrompt}
+            onSave={handleSystemPromptSave}
+            onReset={handleSystemPromptReset}
         />
       </div>
     </>

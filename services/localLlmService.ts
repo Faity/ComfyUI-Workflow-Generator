@@ -1,5 +1,3 @@
-
-
 import type { SystemInventory, GeneratedWorkflowResponse, ComfyUIWorkflow, ComfyUIApiWorkflow, ValidationResponse, DebugResponse, WorkflowFormat } from '../types';
 import { 
     SYSTEM_INSTRUCTION_TEMPLATE, 
@@ -78,7 +76,8 @@ export const generateWorkflowLocal = async (
     inventory: SystemInventory | null, 
     imageName?: string,
     ragApiUrl?: string, 
-    format: WorkflowFormat = 'graph'
+    format: WorkflowFormat = 'graph',
+    systemInstructionTemplate: string = SYSTEM_INSTRUCTION_TEMPLATE
 ): Promise<Omit<GeneratedWorkflowResponse, 'validationLog'>> => {
     if (!localLlmApiUrl) throw new Error("Ollama Generation URL is not configured.");
     if (!localLlmModel) throw new Error("Local LLM Model Name is not configured.");
@@ -123,7 +122,8 @@ ${JSON.stringify(inventory, null, 2)}
 
     const formatInstruction = format === 'api' ? API_FORMAT_INSTRUCTION : GRAPH_FORMAT_INSTRUCTION;
 
-    const finalSystemInstruction = SYSTEM_INSTRUCTION_TEMPLATE
+    // Use custom or default prompt
+    const finalSystemInstruction = systemInstructionTemplate
         .replace('{{RAG_CONTEXT_PLACEHOLDER}}', ragContextBlock)
         .replace('{{IMAGE_CONTEXT_PLACEHOLDER}}', imageContextBlock)
         .replace('{{SYSTEM_INVENTORY_PLACEHOLDER}}', inventoryBlock)
