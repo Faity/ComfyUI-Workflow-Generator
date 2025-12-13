@@ -10,7 +10,6 @@ import {
 } from './prompts';
 
 // --- Helper to extract JSON from LLM text response ---
-// Updated to handle mixed content (Thinking tags + JSON) and trailing text robustly
 const extractContentFromText = (text: string): { json: any, thoughts?: string } => {
     let cleanText = text.trim();
     let thoughts: string | undefined;
@@ -120,13 +119,13 @@ export const generateWorkflowStream = async (
     localLlmModel: string,
     inventory: SystemInventory | null,
     imageName: string | undefined,
-    ragApiUrl: string, // We use this URL as the backend base for the stream endpoint
+    ragApiUrl: string, 
     format: WorkflowFormat = 'graph',
     systemInstructionTemplate: string = SYSTEM_INSTRUCTION_TEMPLATE,
     onThoughtsUpdate: (thoughtChunk: string) => void
 ): Promise<GeneratedWorkflowResponse> => {
     
-    // Construct Prompt (Same as before)
+    // Construct Prompt
     let ragContextBlock = '';
     if (ragApiUrl) {
         try {
@@ -155,20 +154,49 @@ export const generateWorkflowStream = async (
         .replace('{{FORMAT_INSTRUCTION_PLACEHOLDER}}', formatInstruction);
 
     // Call Backend Streaming Endpoint
-    const endpoint = new URL('/v1/generate_workflow_stream', ragApiUrl).toString();
+    let endpoint: string;
+    try {
+        endpoint = new URL('/v1/generate_workflow_stream', ragApiUrl).toString();
+    } catch (e) {
+        throw new Error(`Invalid Python Backend URL configured: ${ragApiUrl}`);
+    }
 
-    const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            prompt: description,
-            model: localLlmModel,
-            system_prompt: finalSystemInstruction,
-            ollama_url: localLlmApiUrl // Pass the frontend-configured Ollama URL to the backend
-        })
-    });
+    console.log(`[Stream Debug] Attempting to connect to: ${endpoint}`);
 
-    if (!response.ok) throw new Error(`Stream Error: ${response.statusText}`);
+    let response: Response;
+    try {
+        response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                prompt: description,
+                model: localLlmModel,
+                system_prompt: finalSystemInstruction,
+                ollama_url: localLlmApiUrl 
+            })
+        });
+    } catch (error: any) {
+        console.error("[Stream Debug] Fetch failed:", error);
+        
+        // Detailed Network Error Analysis
+        if (error instanceof TypeError && error.message === 'Failed to fetch') {
+            throw new Error(
+                `Connection Failed to Backend (${endpoint}). \n` + 
+                `Possible causes:\n` +
+                `1. CORS is not enabled in main.py (Most likely).\n` +
+                `2. The Python server is not running.\n` +
+                `3. Mixed Content: Frontend is HTTPS, Backend is HTTP.\n\n` +
+                `Check browser console (F12) for specific CORS errors.`
+            );
+        }
+        throw new Error(`Network Error: ${error.message}`);
+    }
+
+    if (!response.ok) {
+        const errorText = await response.text().catch(() => 'No error details');
+        throw new Error(`Backend Error (${response.status}): ${errorText}`);
+    }
+    
     if (!response.body) throw new Error("No response body for stream.");
 
     const reader = response.body.getReader();
@@ -229,8 +257,8 @@ export const generateWorkflowStream = async (
         }
         return parsed;
     } catch (e) {
-        console.error("Final JSON Parse Failed:", finalJsonString);
-        throw new Error("Failed to parse generated JSON. See console for raw output.");
+        console.error("Final JSON Parse Failed. Raw:", finalJsonString);
+        throw new Error(`Failed to parse generated JSON. Error: ${(e as Error).message}`);
     }
 };
 
