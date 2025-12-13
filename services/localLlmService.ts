@@ -116,7 +116,7 @@ async function callLocalLlmChat(apiUrl: string, model: string, messages: Array<{
  */
 export const generateWorkflowStream = async (
     description: string,
-    localLlmApiUrl: string, // Not used directly for stream endpoint if we use a proxy, but kept for signature consistency
+    localLlmApiUrl: string, 
     localLlmModel: string,
     inventory: SystemInventory | null,
     imageName: string | undefined,
@@ -155,7 +155,6 @@ export const generateWorkflowStream = async (
         .replace('{{FORMAT_INSTRUCTION_PLACEHOLDER}}', formatInstruction);
 
     // Call Backend Streaming Endpoint
-    // Note: We assume the backend (Python) has /v1/generate_workflow_stream
     const endpoint = new URL('/v1/generate_workflow_stream', ragApiUrl).toString();
 
     const response = await fetch(endpoint, {
@@ -164,7 +163,8 @@ export const generateWorkflowStream = async (
         body: JSON.stringify({
             prompt: description,
             model: localLlmModel,
-            system_prompt: finalSystemInstruction
+            system_prompt: finalSystemInstruction,
+            ollama_url: localLlmApiUrl // Pass the frontend-configured Ollama URL to the backend
         })
     });
 
@@ -242,7 +242,6 @@ export const validateAndCorrectWorkflowLocal = async (
     ragApiUrl?: string
 ): Promise<ValidationResponse> => {
     // ... (Existing implementation) ...
-    // Placeholder to keep file valid, assume existing code here
     if (!localLlmApiUrl) throw new Error("URL missing");
     const isGraph = typeof workflow === 'object' && 'nodes' in workflow;
     const basePrompt = isGraph ? SYSTEM_INSTRUCTION_VALIDATOR : SYSTEM_INSTRUCTION_API_VALIDATOR;
@@ -286,4 +285,4 @@ export const startFineTuning = async (data: string, apiUrl: string) => { return 
 export const getServerInventory = async (apiUrl: string) => { return {}; };
 export const testLocalLlmConnection = async (url: string) => { return { success: true, message: "ok" }; };
 export const testRagConnection = async (url: string) => { return { success: true, message: "ok" }; };
-export const generateWorkflowLocal = async (...args: any[]) => { throw new Error("Deprecated"); } // Deprecating the non-stream version
+export const generateWorkflowLocal = async (...args: any[]) => { throw new Error("Deprecated"); } 

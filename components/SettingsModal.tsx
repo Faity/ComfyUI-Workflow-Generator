@@ -221,30 +221,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
 
                 <div className="mb-4">
-                    <label htmlFor="local-llm-url-input" className="block text-sm font-medium text-slate-600 mb-2">Ollama Generation URL</label>
-                     <div className="flex items-center space-x-2">
-                        <input
-                            id="local-llm-url-input"
-                            type="text"
-                            value={localLlmApiUrl}
-                            onChange={(e) => setLocalLlmApiUrl(e.target.value)}
-                            placeholder="http://127.0.0.1:11434"
-                            className="w-full p-2 bg-white border border-slate-300 focus:border-teal-500 rounded-lg focus:ring-2 focus:ring-teal-200 transition-all"
-                        />
-                        <div className="w-5 h-5 flex-shrink-0">{renderTestStatus(llmTestStatus, llmTestMessage)}</div>
-                        <button onClick={handleTestLocalLlm} disabled={llmTestStatus === 'testing'} className="px-4 py-2 text-sm bg-sky-500 text-white rounded-lg hover:bg-sky-600 disabled:opacity-50 transition-colors whitespace-nowrap shadow-sm">
-                            {t.settingsTestConnection}
-                        </button>
-                    </div>
-                    {llmTestStatus === 'error' && <p className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded-md">{llmTestMessage}</p>}
-                    {llmTestStatus === 'success' && <p className="mt-2 text-xs text-green-600">{llmTestMessage}</p>}
-                    <p className="mt-2 text-xs text-slate-500">
-                        Standard Ollama URL (e.g. http://127.0.0.1:11434). Used for generating workflows.
-                    </p>
-                </div>
-
-                <div className="mb-4">
-                    <label htmlFor="rag-url-input" className="block text-sm font-medium text-slate-600 mb-2">RAG / Helper API URL</label>
+                    <label htmlFor="rag-url-input" className="block text-sm font-medium text-slate-600 mb-2">{t.settingsBackendUrl}</label>
                      <div className="flex items-center space-x-2">
                         <input
                             id="rag-url-input"
@@ -262,7 +239,30 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     {ragTestStatus === 'error' && <p className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded-md">{ragTestMessage}</p>}
                     {ragTestStatus === 'success' && <p className="mt-2 text-xs text-green-600">{ragTestMessage}</p>}
                     <p className="mt-2 text-xs text-slate-500">
-                        Python Server URL (e.g. http://127.0.0.1:8000). Used for Inventory, RAG, and Fine-Tuning.
+                        {t.settingsBackendUrlHelp}
+                    </p>
+                </div>
+
+                <div className="mb-4">
+                    <label htmlFor="local-llm-url-input" className="block text-sm font-medium text-slate-600 mb-2">{t.settingsLocalLlmUrl}</label>
+                     <div className="flex items-center space-x-2">
+                        <input
+                            id="local-llm-url-input"
+                            type="text"
+                            value={localLlmApiUrl}
+                            onChange={(e) => setLocalLlmApiUrl(e.target.value)}
+                            placeholder="http://127.0.0.1:11434"
+                            className="w-full p-2 bg-white border border-slate-300 focus:border-teal-500 rounded-lg focus:ring-2 focus:ring-teal-200 transition-all"
+                        />
+                        <div className="w-5 h-5 flex-shrink-0">{renderTestStatus(llmTestStatus, llmTestMessage)}</div>
+                        <button onClick={handleTestLocalLlm} disabled={llmTestStatus === 'testing'} className="px-4 py-2 text-sm bg-sky-500 text-white rounded-lg hover:bg-sky-600 disabled:opacity-50 transition-colors whitespace-nowrap shadow-sm">
+                            {t.settingsTestConnection}
+                        </button>
+                    </div>
+                    {llmTestStatus === 'error' && <p className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded-md">{llmTestMessage}</p>}
+                    {llmTestStatus === 'success' && <p className="mt-2 text-xs text-green-600">{llmTestMessage}</p>}
+                    <p className="mt-2 text-xs text-slate-500">
+                        {t.settingsLocalLlmUrlHelp}
                     </p>
                 </div>
 
