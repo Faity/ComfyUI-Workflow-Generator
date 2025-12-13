@@ -203,9 +203,11 @@ export const generateWorkflowStream = async (
     const decoder = new TextDecoder();
     
     let buffer = '';
-    let jsonBuffer = '';
     let isJsonMode = false;
     const SEPARATOR = "###JSON_START###";
+    
+    // Wir sammeln alles für den Fallback am Ende
+    let fullRawText = ''; 
     let fullThoughts = '';
 
     while (true) {
@@ -213,51 +215,72 @@ export const generateWorkflowStream = async (
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
+        fullRawText += chunk;
         
+        // Live UI Updates (Best Effort)
         if (!isJsonMode) {
             buffer += chunk;
             const sepIndex = buffer.indexOf(SEPARATOR);
             
             if (sepIndex !== -1) {
-                // Separator found!
+                // Separator found during streaming
                 const thoughtsPart = buffer.substring(0, sepIndex);
-                fullThoughts = thoughtsPart.replace('THOUGHTS:', '').trim(); // Initial cleanup
+                fullThoughts = thoughtsPart.replace('THOUGHTS:', '').trim(); 
                 onThoughtsUpdate(fullThoughts);
                 
                 // Switch to JSON mode
-                jsonBuffer = buffer.substring(sepIndex + SEPARATOR.length);
                 isJsonMode = true;
-                buffer = ''; // clear buffer to save memory
+                buffer = ''; // buffer cleared, rest is now accumulating in fullRawText
             } else {
                 // Still thinking... update thoughts live
-                // Avoid flickering "THOUGHTS:" at the start
                 const displayBuffer = buffer.replace('THOUGHTS:', '').trimStart();
                 onThoughtsUpdate(displayBuffer);
             }
-        } else {
-            // In JSON mode, just accumulate
-            jsonBuffer += chunk;
         }
     }
 
-    // Final Parsing
-    let finalJsonString = isJsonMode ? jsonBuffer : buffer; // Fallback if separator missing
-    
-    // Clean up markdown code blocks if present (Ollama sometimes adds them despite instructions)
-    const jsonBlockRegex = /```(?:json)?\s*([\s\S]*?)\s*```/i;
-    const match = finalJsonString.match(jsonBlockRegex);
-    if (match && match[1]) finalJsonString = match[1];
+    // --- ROBUST FINAL PARSING ---
+    // Wir nutzen den komplett gesammelten Text (fullRawText), um sicherzustellen, 
+    // dass wir sauber trennen, auch wenn der Stream gestottert hat.
+
+    let jsonContent = '';
+    let finalThoughts = fullThoughts;
+
+    // SICHERHEITS-CHECK: Hat das LLM den Trenner vielleicht anders geschrieben?
+    // Wir suchen nach dem Marker im gesamten Text.
+    if (fullRawText.includes(SEPARATOR)) {
+        const parts = fullRawText.split(SEPARATOR);
+        // Clean Thoughts
+        finalThoughts = parts[0].replace('THOUGHTS:', '').trim();
+        // Alles nach dem Marker ist potenzielles JSON
+        jsonContent = parts.slice(1).join(SEPARATOR).trim(); 
+    } else {
+        // Fallback: Wenn kein Marker da ist, suchen wir die erste geschweifte Klammer '{'
+        const firstBrace = fullRawText.indexOf('{');
+        if (firstBrace > -1) {
+            finalThoughts = fullRawText.substring(0, firstBrace).replace('THOUGHTS:', '').trim();
+            jsonContent = fullRawText.substring(firstBrace).trim();
+        } else {
+             // Fallback 2: Ganzen Text versuchen (wird wahrscheinlich fehlschlagen, aber besser als nichts)
+             jsonContent = fullRawText;
+        }
+    }
+
+    // Markdown-Code-Blöcke entfernen (falls das LLM ```json schreibt)
+    jsonContent = jsonContent.replace(/```json/g, '').replace(/```/g, '').trim();
+
+    console.log("[Stream Debug] Parsing content start:", jsonContent.substring(0, 50) + "..."); 
 
     try {
-        const parsed = JSON.parse(finalJsonString) as GeneratedWorkflowResponse;
-        parsed.thoughts = fullThoughts || (isJsonMode ? fullThoughts : "No thoughts separator found, but JSON generated.");
+        const parsed = JSON.parse(jsonContent) as GeneratedWorkflowResponse;
+        parsed.thoughts = finalThoughts || "Thoughts generated but lost in parsing.";
         
         if (!parsed.workflow || !parsed.requirements) {
              throw new Error("Invalid JSON structure: Missing workflow or requirements.");
         }
         return parsed;
     } catch (e) {
-        console.error("Final JSON Parse Failed. Raw:", finalJsonString);
+        console.error("Final JSON Parse Failed. Raw:", jsonContent);
         throw new Error(`Failed to parse generated JSON. Error: ${(e as Error).message}`);
     }
 };
