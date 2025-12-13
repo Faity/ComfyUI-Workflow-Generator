@@ -110,8 +110,8 @@ async function callLocalLlmChat(apiUrl: string, model: string, messages: Array<{
 }
 
 /**
- * STREAMING GENERATION
- * Reads a stream from the backend, parses "THOUGHTS" vs "JSON" in real-time.
+ * STREAMING GENERATION - PANZER-LOGIK EDITION
+ * Robust stream reading, splitting, fallback parsing, and auto-repair.
  */
 export const generateWorkflowStream = async (
     description: string,
@@ -125,7 +125,7 @@ export const generateWorkflowStream = async (
     onThoughtsUpdate: (thoughtChunk: string) => void
 ): Promise<GeneratedWorkflowResponse> => {
     
-    // Construct Prompt
+    // --- 1. PROMPT CONSTRUCTION ---
     let ragContextBlock = '';
     if (ragApiUrl) {
         try {
@@ -153,7 +153,9 @@ export const generateWorkflowStream = async (
         .replace('{{SYSTEM_INVENTORY_PLACEHOLDER}}', inventoryBlock)
         .replace('{{FORMAT_INSTRUCTION_PLACEHOLDER}}', formatInstruction);
 
-    // Call Backend Streaming Endpoint
+    // --- 2. STREAM REQUEST ---
+    console.log("🚀 Starte Stream-Request an Backend...", ragApiUrl);
+
     let endpoint: string;
     try {
         endpoint = new URL('/v1/generate_workflow_stream', ragApiUrl).toString();
@@ -161,11 +163,8 @@ export const generateWorkflowStream = async (
         throw new Error(`Invalid Python Backend URL configured: ${ragApiUrl}`);
     }
 
-    console.log(`[Stream Debug] Attempting to connect to: ${endpoint}`);
-
-    let response: Response;
     try {
-        response = await fetch(endpoint, {
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -175,113 +174,130 @@ export const generateWorkflowStream = async (
                 ollama_url: localLlmApiUrl 
             })
         });
-    } catch (error: any) {
-        console.error("[Stream Debug] Fetch failed:", error);
+
+        if (!response.body) throw new Error("Kein ReadableStream vom Server erhalten");
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
         
-        // Detailed Network Error Analysis
-        if (error instanceof TypeError && error.message === 'Failed to fetch') {
-            throw new Error(
-                `Connection Failed to Backend (${endpoint}). \n` + 
-                `Possible causes:\n` +
-                `1. CORS is not enabled in main.py (Most likely).\n` +
-                `2. The Python server is not running.\n` +
-                `3. Mixed Content: Frontend is HTTPS, Backend is HTTP.\n\n` +
-                `Check browser console (F12) for specific CORS errors.`
-            );
-        }
-        throw new Error(`Network Error: ${error.message}`);
-    }
+        let fullText = '';
+        let thoughts = '';
+        let isJsonMode = false;
+        let jsonBuffer = '';
+        const MARKER = "###JSON_START###";
 
-    if (!response.ok) {
-        const errorText = await response.text().catch(() => 'No error details');
-        throw new Error(`Backend Error (${response.status}): ${errorText}`);
-    }
-    
-    if (!response.body) throw new Error("No response body for stream.");
+        // --- 3. STREAM LOOP ---
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    
-    let buffer = '';
-    let isJsonMode = false;
-    const SEPARATOR = "###JSON_START###";
-    
-    // Wir sammeln alles für den Fallback am Ende
-    let fullRawText = ''; 
-    let fullThoughts = '';
-
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        fullRawText += chunk;
-        
-        // Live UI Updates (Best Effort)
-        if (!isJsonMode) {
-            buffer += chunk;
-            const sepIndex = buffer.indexOf(SEPARATOR);
+            const chunk = decoder.decode(value, { stream: true });
+            fullText += chunk;
             
-            if (sepIndex !== -1) {
-                // Separator found during streaming
-                const thoughtsPart = buffer.substring(0, sepIndex);
-                fullThoughts = thoughtsPart.replace('THOUGHTS:', '').trim(); 
-                onThoughtsUpdate(fullThoughts);
-                
-                // Switch to JSON mode
-                isJsonMode = true;
-                buffer = ''; // buffer cleared, rest is now accumulating in fullRawText
+            // Live-Parsing Logik
+            if (!isJsonMode) {
+                if (fullText.includes(MARKER)) {
+                    // Trenner gefunden! Umschalten!
+                    const parts = fullText.split(MARKER);
+                    thoughts = parts[0].trim().replace('THOUGHTS:', '').trim();
+                    jsonBuffer = parts[1] || ''; // Der Rest ist schon JSON
+                    isJsonMode = true;
+                    
+                    // Letztes Update für die Gedanken-UI
+                    onThoughtsUpdate(thoughts);
+                } else {
+                    // Noch beim Denken...
+                    const displayThoughts = fullText.replace('THOUGHTS:', '').trimStart();
+                    onThoughtsUpdate(displayThoughts);
+                }
             } else {
-                // Still thinking... update thoughts live
-                const displayBuffer = buffer.replace('THOUGHTS:', '').trimStart();
-                onThoughtsUpdate(displayBuffer);
+                // Wir sind im JSON-Modus, nur noch sammeln
+                jsonBuffer += chunk;
             }
         }
-    }
 
-    // --- ROBUST FINAL PARSING ---
-    // Wir nutzen den komplett gesammelten Text (fullRawText), um sicherzustellen, 
-    // dass wir sauber trennen, auch wenn der Stream gestottert hat.
+        console.log("🏁 Stream beendet. Analysiere Daten...");
 
-    let jsonContent = '';
-    let finalThoughts = fullThoughts;
+        // --- 4. FALLBACK LOGIK (Falls der Trenner fehlte oder kaputt war) ---
+        let finalJsonString = jsonBuffer;
 
-    // SICHERHEITS-CHECK: Hat das LLM den Trenner vielleicht anders geschrieben?
-    // Wir suchen nach dem Marker im gesamten Text.
-    if (fullRawText.includes(SEPARATOR)) {
-        const parts = fullRawText.split(SEPARATOR);
-        // Clean Thoughts
-        finalThoughts = parts[0].replace('THOUGHTS:', '').trim();
-        // Alles nach dem Marker ist potenzielles JSON
-        jsonContent = parts.slice(1).join(SEPARATOR).trim(); 
-    } else {
-        // Fallback: Wenn kein Marker da ist, suchen wir die erste geschweifte Klammer '{'
-        const firstBrace = fullRawText.indexOf('{');
-        if (firstBrace > -1) {
-            finalThoughts = fullRawText.substring(0, firstBrace).replace('THOUGHTS:', '').trim();
-            jsonContent = fullRawText.substring(firstBrace).trim();
-        } else {
-             // Fallback 2: Ganzen Text versuchen (wird wahrscheinlich fehlschlagen, aber besser als nichts)
-             jsonContent = fullRawText;
+        if (!isJsonMode) {
+            console.warn("⚠️ Kein Trenner '###JSON_START###' gefunden! Versuche Fallback...");
+            // Suche nach der ersten geschweiften Klammer, die nach JSON aussieht
+            // Wir ignorieren alles vor der ersten {
+            const firstBrace = fullText.indexOf('{');
+            const lastBrace = fullText.lastIndexOf('}');
+            
+            if (firstBrace > -1 && lastBrace > firstBrace) {
+                thoughts = fullText.substring(0, firstBrace).replace('THOUGHTS:', '').trim();
+                finalJsonString = fullText.substring(firstBrace, lastBrace + 1);
+                console.log("✅ Fallback erfolgreich: JSON extrahiert.");
+            } else {
+                // Letzter Verzweiflungsversuch: Vielleicht ist der ganze Text JSON?
+                console.warn("⚠️ Keine Klammern für Fallback gefunden. Versuche Raw Text...");
+                finalJsonString = fullText;
+                thoughts = "Parsing Error: Could not separate thoughts from JSON.";
+            }
         }
-    }
 
-    // Markdown-Code-Blöcke entfernen (falls das LLM ```json schreibt)
-    jsonContent = jsonContent.replace(/```json/g, '').replace(/```/g, '').trim();
+        // Markdown (```json) entfernen, falls vorhanden
+        finalJsonString = finalJsonString.replace(/```json/g, '').replace(/```/g, '').trim();
 
-    console.log("[Stream Debug] Parsing content start:", jsonContent.substring(0, 50) + "..."); 
+        if (!finalJsonString) {
+             throw new Error("JSON-Buffer ist leer! KI hat abgebrochen oder keine Ausgabe geliefert.");
+        }
 
-    try {
-        const parsed = JSON.parse(jsonContent) as GeneratedWorkflowResponse;
-        parsed.thoughts = finalThoughts || "Thoughts generated but lost in parsing.";
+        console.log("[Stream Debug] Versuche zu parsen:", finalJsonString.substring(0, 50) + "..."); 
+
+        // --- 5. PARSING ---
+        let parsedData: any;
+        try {
+            parsedData = JSON.parse(finalJsonString);
+        } catch (e) {
+            console.error("❌ JSON Parse Fehler. String war:", finalJsonString);
+            throw new Error(`Syntax-Fehler im generierten JSON: ${(e as Error).message}`);
+        }
+
+        // --- 6. STRUKTUR-REPARATUR (Auto-Fix) ---
+        // Falls "workflow" fehlt (KI hat direkt Nodes geschickt)
+        if (!parsedData.workflow && (parsedData.nodes || parsedData.links || Object.keys(parsedData).some(k => !isNaN(Number(k))))) {
+            console.warn("⚠️ Wrapper fehlt. Repariere Struktur...");
+            parsedData = {
+                workflow: parsedData,
+                requirements: { models: [], custom_nodes: [] }
+            };
+        }
         
-        if (!parsed.workflow || !parsed.requirements) {
-             throw new Error("Invalid JSON structure: Missing workflow or requirements.");
+        // Falls "requirements" fehlen
+        if (parsedData.workflow && !parsedData.requirements) {
+            parsedData.requirements = { models: [], custom_nodes: [] };
         }
-        return parsed;
-    } catch (e) {
-        console.error("Final JSON Parse Failed. Raw:", jsonContent);
-        throw new Error(`Failed to parse generated JSON. Error: ${(e as Error).message}`);
+
+        // Letzter Check
+        if (!parsedData.workflow) {
+             throw new Error("Ungültige Workflow-Struktur (Kein 'workflow' Objekt gefunden).");
+        }
+
+        return {
+            thoughts: thoughts || "Keine Gedanken protokolliert.",
+            workflow: parsedData.workflow,
+            requirements: parsedData.requirements
+        };
+
+    } catch (error: any) {
+        console.error("🔥 FATAL ERROR im Stream Service:", error);
+        
+        // Detailed Network Error Analysis for user feedback
+        if (error instanceof TypeError && error.message === 'Failed to fetch') {
+            throw new Error(
+                `Connection Failed to Backend (${endpoint!}). \n` + 
+                `Possible causes:\n` +
+                `1. CORS is not enabled in main.py.\n` +
+                `2. The Python server is not running.\n` +
+                `Check browser console (F12) for details.`
+            );
+        }
+        throw error;
     }
 };
 
